@@ -88,7 +88,7 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
             <li key={href}>
               <a
                 href={href}
-                className="rounded-full px-4 py-1.5 text-sm text-ink/80 transition hover:bg-forest-deep/10 hover:text-[var(--forest-deep)]"
+                className="rounded-full px-4 py-1.5 text-sm text-white transition hover:bg-white/20 hover:text-white"
               >
                 {label}
               </a>
