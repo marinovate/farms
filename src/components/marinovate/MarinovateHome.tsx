@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import {
   Leaf, Fish, Apple, Truck, ShieldCheck, Clock, Package, MapPin, Phone, Mail,
   Sparkles, ArrowUpRight, ArrowRight, Star, ChevronDown, Snowflake, Search,
-  BadgeCheck, Boxes, Sun, Waves, Heart, Brain,
+  BadgeCheck, Boxes, Sun, Waves, Heart, Brain, ShoppingCart, Plus, Minus, X,
 } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
 import vegImg from "@/assets/vegetables.jpg";
@@ -11,10 +11,36 @@ import fruitImg from "@/assets/fruits.jpg";
 import seaImg from "@/assets/seafood.jpg";
 import storyImg from "@/assets/story.jpg";
 
+export type Product = {
+  id: string;
+  name: string;
+  category: "Vegetables" | "Fruits" | "Seafood";
+  price: string;
+  image: string;
+};
+
+export type CartItem = Product & { quantity: number };
+
+const ALL_PRODUCTS: Product[] = [
+  { id: "v1", name: "Farm Fresh Tomatoes", category: "Vegetables", price: "₹40 / kg", image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&q=80" },
+  { id: "v2", name: "Red Onions", category: "Vegetables", price: "₹35 / kg", image: "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=800&q=80" },
+  { id: "v3", name: "Potatoes", category: "Vegetables", price: "₹30 / kg", image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800&q=80" },
+  { id: "v4", name: "Fresh Carrots", category: "Vegetables", price: "₹60 / kg", image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=800&q=80" },
+  { id: "v5", name: "Spinach (Palak)", category: "Vegetables", price: "₹25 / bunch", image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=800&q=80" },
+
+  { id: "f1", name: "Alphonso Mangoes", category: "Fruits", price: "₹800 / doz", image: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&q=80" },
+  { id: "f2", name: "Robusta Bananas", category: "Fruits", price: "₹60 / doz", image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=800&q=80" },
+  { id: "f3", name: "Kashmir Apples", category: "Fruits", price: "₹200 / kg", image: "https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?w=800&q=80" },
+  { id: "f4", name: "Pomegranates", category: "Fruits", price: "₹250 / kg", image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80" },
+
+  { id: "s1", name: "Tiger Prawns", category: "Seafood", price: "₹900 / kg", image: "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=800&q=80" },
+  { id: "s2", name: "Seer Fish (Surmai)", category: "Seafood", price: "₹1200 / kg", image: "https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=800&q=80" },
+];
+
 /* ------------------------------------------------------------------ */
 /* Nav                                                                */
 /* ------------------------------------------------------------------ */
-function Nav() {
+function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => void }) {
   const [hidden, setHidden] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const last = useRef(0);
@@ -69,12 +95,25 @@ function Nav() {
             </li>
           ))}
         </ul>
-        <a
-          href="#bulk"
-          className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-[var(--forest-deep)] px-4 py-2 text-sm font-medium text-[var(--cream)] transition hover:bg-[var(--forest)]"
-        >
-          Bulk Quote <ArrowUpRight className="h-3.5 w-3.5" />
-        </a>
+        <div className="ml-1 flex items-center gap-2">
+          <a
+            href="#bulk"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--forest-deep)] px-4 py-2 text-sm font-medium text-[var(--cream)] transition hover:bg-[var(--forest)]"
+          >
+            Bulk Quote <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
+          <button
+            onClick={onOpenCart}
+            className="relative grid h-9 w-9 place-items-center rounded-full bg-[var(--gold)] text-[var(--ink)] shadow transition hover:scale-105"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {cartCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--forest-deep)] text-[10px] font-bold text-white">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </nav>
     </motion.header>
   );
@@ -220,13 +259,14 @@ function Hero() {
 /* ------------------------------------------------------------------ */
 /* Section helpers                                                    */
 /* ------------------------------------------------------------------ */
-function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
     >
       {children}
     </motion.div>
@@ -312,26 +352,126 @@ function WhySection() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Cart Sidebar                                                        */
+/* ------------------------------------------------------------------ */
+function CartSidebar({
+  isOpen, onClose, cart, updateQuantity,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  cart: CartItem[];
+  updateQuantity: (id: string, delta: number) => void;
+}) {
+  const handleCheckout = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const address = formData.get("address") as string;
+    
+    if (cart.length === 0) return alert("Your cart is empty!");
+
+    const orderDetails = cart.map(item => `${item.name} (Qty: ${item.quantity}) - ${item.price}`).join("\n");
+    
+    const text = `*New Order from Website*
+*Name:* ${name}
+*Address:* ${address}
+
+*Order Details:*
+${orderDetails}`;
+
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/918019794244?text=${encoded}`, "_blank");
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed bottom-0 right-0 top-0 z-[101] flex w-full max-w-md flex-col bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 p-6">
+              <h2 className="font-display text-2xl text-[var(--forest-deep)]">Your Cart</h2>
+              <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 transition hover:bg-gray-200">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {cart.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-gray-400">
+                  <ShoppingCart className="mb-4 h-12 w-12 opacity-20" />
+                  <p>Your cart is empty.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {cart.map(item => (
+                    <div key={item.id} className="flex gap-4">
+                      <img src={item.image} alt={item.name} className="h-20 w-20 rounded-xl object-cover" />
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{item.name}</h4>
+                          <p className="text-sm text-gray-500">{item.price}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => updateQuantity(item.id, -1)} className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50">
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="text-sm font-medium">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50">
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="border-t border-gray-100 bg-gray-50 p-6">
+                <form onSubmit={handleCheckout} className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-500 uppercase">Full Name</label>
+                    <input type="text" name="name" required className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:border-[var(--forest-deep)]" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-500 uppercase">Delivery Address</label>
+                    <textarea name="address" required rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:border-[var(--forest-deep)]" />
+                  </div>
+                  <button type="submit" className="w-full rounded-xl bg-[var(--forest-deep)] py-3 text-sm font-medium text-white transition hover:bg-[var(--forest)]">
+                    Checkout via WhatsApp
+                  </button>
+                </form>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Products                                                            */
 /* ------------------------------------------------------------------ */
-function ProductsSection() {
-  const products = [
-    {
-      icon: Leaf, tag: "Vegetables", title: "Fresh Vegetables",
-      body: "Leafy greens, roots, herbs, exotics — harvested daily and grade-sorted before it leaves the farm.",
-      img: vegImg,
-    },
-    {
-      icon: Apple, tag: "Fruits", title: "Fresh Fruits",
-      body: "Seasonal Indian favourites and exotic imports, chosen at peak ripeness for flavour and shelf life.",
-      img: fruitImg,
-    },
-    {
-      icon: Fish, tag: "Seafood", title: "Fresh Seafood",
-      body: "Direct from coastal fisheries — fish, prawns, mollusks — packed on ice in strict cold chain.",
-      img: seaImg,
-    },
-  ];
+function ProductsSection({ addToCart }: { addToCart: (p: Product) => void }) {
+  const [activeTab, setActiveTab] = useState<"All" | "Vegetables" | "Fruits" | "Seafood">("All");
+
+  const filtered = ALL_PRODUCTS.filter(p => activeTab === "All" || p.category === activeTab);
+
   return (
     <section id="products" className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-7xl">
@@ -340,39 +480,57 @@ function ProductsSection() {
           script="Farm to Table"
           title="A curated pantry of the freshest India has to offer."
         />
-        <div className="mt-20 grid gap-6 md:grid-cols-3">
-          {products.map((p, i) => (
-            <Reveal key={p.title} delay={i * 0.1}>
-              <motion.article
-                whileHover={{ y: -10 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="group relative overflow-hidden rounded-[32px] border border-white/70 bg-white shadow-[0_30px_60px_-30px_rgba(30,86,49,0.3)]"
+        
+        <div className="mt-12 flex flex-wrap justify-center gap-2">
+          {["All", "Vegetables", "Fruits", "Seafood"].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`rounded-full px-6 py-2 text-sm font-medium transition ${
+                activeTab === tab
+                  ? "bg-[var(--forest-deep)] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((p) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                key={p.id}
+                className="group relative flex flex-col overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-[var(--forest-deep)]/5 transition-all"
               >
-                <div className="relative aspect-[4/5] overflow-hidden">
-                  <img
-                    src={p.img}
-                    alt={p.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-deep)]/85 via-[var(--forest-deep)]/10 to-transparent" />
-                  <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/15 px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-white backdrop-blur-md">
-                    <p.icon className="h-3.5 w-3.5" /> {p.tag}
-                  </div>
-                  <div className="absolute inset-x-6 bottom-6 text-white">
-                    <h3 className="font-display text-3xl leading-tight">{p.title}</h3>
-                    <p className="mt-2 max-w-sm text-sm text-white/80">{p.body}</p>
-                    <a
-                      href="#contact"
-                      className="mt-5 inline-flex items-center gap-2 text-sm text-[var(--gold)] transition group-hover:gap-3"
+                <div className="aspect-[4/3] overflow-hidden bg-gray-100">
+                  <img src={p.image} alt={p.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+                </div>
+                <div className="flex flex-1 flex-col p-5">
+                  <span className="mb-2 w-fit rounded-full bg-[var(--fresh)]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--forest-deep)]">
+                    {p.category}
+                  </span>
+                  <h3 className="font-display text-lg text-gray-900">{p.name}</h3>
+                  <p className="mt-1 text-sm text-gray-500">{p.price}</p>
+                  
+                  <div className="mt-6 mt-auto">
+                    <button
+                      onClick={() => addToCart(p)}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-50 py-2.5 text-sm font-medium text-[var(--forest-deep)] transition hover:bg-[var(--forest-deep)] hover:text-white"
                     >
-                      Learn more <ArrowUpRight className="h-4 w-4" />
-                    </a>
+                      <Plus className="h-4 w-4" /> Add to Cart
+                    </button>
                   </div>
                 </div>
-              </motion.article>
-            </Reveal>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
     </section>
@@ -837,8 +995,8 @@ function Contact() {
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Contact" script="Let's Talk" title="Fresh conversations start here." />
         <div className="mt-16 grid gap-8 lg:grid-cols-5">
-          <Reveal>
-            <div className="glass h-full rounded-[32px] p-8 lg:col-span-2">
+          <Reveal className="lg:col-span-2">
+            <div className="glass h-full rounded-[32px] p-8">
               <h3 className="font-display text-2xl text-[var(--forest-deep)]">Get in touch</h3>
               <p className="mt-2 text-sm text-[var(--ink)]/65">
                 We respond to enquiries within one business day.
@@ -883,10 +1041,33 @@ function Contact() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.1}>
+          <Reveal delay={0.1} className="lg:col-span-3">
             <form
-              onSubmit={(e) => { e.preventDefault(); alert("Thank you — we will be in touch soon."); }}
-              className="glass rounded-[32px] p-8 lg:col-span-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const name = formData.get("name") as string;
+                const company = formData.get("company") as string;
+                const email = formData.get("email") as string;
+                const phone = formData.get("phone") as string;
+                const interest = formData.get("interest") as string;
+                const message = formData.get("message") as string;
+
+                const fields = [
+                  `*New Enquiry from Website*`,
+                  name ? `*Name:* ${name}` : null,
+                  company ? `*Company:* ${company}` : null,
+                  email ? `*Email:* ${email}` : null,
+                  phone ? `*Phone:* ${phone}` : null,
+                  interest ? `*Interest:* ${interest}` : null,
+                  message ? `*Message:* ${message}` : null,
+                ].filter(Boolean);
+
+                const text = fields.join("\n");
+                const encodedText = encodeURIComponent(text);
+                window.open(`https://wa.me/918019794244?text=${encodedText}`, "_blank");
+              }}
+              className="glass rounded-[32px] p-8"
             >
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Full name" name="name" />
@@ -1055,16 +1236,44 @@ function CursorGlow() {
 /* Main                                                                 */
 /* ------------------------------------------------------------------ */
 export function MarinovateHome() {
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const addToCart = (product: Product) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
+        return prev.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          return { ...item, quantity: Math.max(0, item.quantity + delta) };
+        }
+        return item;
+      }).filter((item) => item.quantity > 0)
+    );
+  };
+
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <div className="relative overflow-x-clip">
       <ProgressBar />
       <CursorGlow />
       <FloatingLeaves />
-      <Nav />
+      <Nav cartCount={cartCount} onOpenCart={() => setIsCartOpen(true)} />
+      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} updateQuantity={updateQuantity} />
       <main>
         <Hero />
         <WhySection />
-        <ProductsSection />
+        <ProductsSection addToCart={addToCart} />
         <StorySection />
         <HealthSection />
         <ProcessSection />
