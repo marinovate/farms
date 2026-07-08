@@ -88,7 +88,7 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
             <li key={href}>
               <a
                 href={href}
-                className="rounded-full px-4 py-1.5 text-sm text-[var(--ink)]/80 transition hover:bg-[var(--forest-deep)]/10 hover:text-[var(--forest-deep)]"
+                className="rounded-full px-4 py-1.5 text-sm text-ink/80 transition hover:bg-forest-deep/10 hover:text-[var(--forest-deep)]"
               >
                 {label}
               </a>
@@ -293,7 +293,7 @@ function SectionHeader({
       </Reveal>
       {subtitle && (
         <Reveal delay={0.2}>
-          <p className="mt-5 text-base leading-relaxed text-[var(--ink)]/65">{subtitle}</p>
+          <p className="mt-5 text-base leading-relaxed text-ink/65">{subtitle}</p>
         </Reveal>
       )}
     </div>
@@ -340,7 +340,7 @@ function WhySection() {
                     <it.icon className="h-5 w-5" />
                   </div>
                   <h3 className="font-display text-xl text-[var(--forest-deep)]">{it.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--ink)]/65">{it.body}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-ink/65">{it.body}</p>
                 </div>
               </motion.div>
             </Reveal>
@@ -507,7 +507,7 @@ function ProductsSection({ addToCart }: { addToCart: (p: Product) => void }) {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3 }}
                 key={p.id}
-                className="group relative flex flex-col overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-[var(--forest-deep)]/5 transition-all"
+                className="group relative flex flex-col overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-forest-deep/5 transition-all"
               >
                 <div className="aspect-[4/3] overflow-hidden bg-gray-100">
                   <img src={p.image} alt={p.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
@@ -558,7 +558,7 @@ function StorySection() {
           <div className="relative">
             <div className="relative overflow-hidden rounded-[36px] shadow-[var(--shadow-luxury)]">
               <img src={storyImg} alt="Golden hour farm" loading="lazy" className="h-[620px] w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-deep)]/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-forest-deep/40 to-transparent" />
             </div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -572,11 +572,11 @@ function StorySection() {
                   <Sun className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--ink)]/60">Harvested</p>
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-ink/60">Harvested</p>
                   <p className="font-display text-lg text-[var(--forest-deep)]">This morning</p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-[var(--ink)]/70">Every crate is picked, checked and packed within a single sunrise window.</p>
+              <p className="mt-4 text-sm text-ink/70">Every crate is picked, checked and packed within a single sunrise window.</p>
             </motion.div>
           </div>
         </Reveal>
@@ -590,7 +590,7 @@ function StorySection() {
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <p className="mt-6 max-w-lg text-[var(--ink)]/65">
+            <p className="mt-6 max-w-lg text-ink/65">
               Marinovate Farms exists to shorten the distance between the farm, the fishery and your kitchen —
               without ever cutting corners on quality, hygiene or timing.
             </p>
@@ -599,12 +599,12 @@ function StorySection() {
             {bullets.map(([t, d], i) => (
               <Reveal key={t} delay={0.05 * i}>
                 <div className="flex gap-4">
-                  <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[var(--forest-deep)]/20 bg-white text-[var(--forest-deep)]">
+                  <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-forest-deep/20 bg-white text-[var(--forest-deep)]">
                     <Leaf className="h-3.5 w-3.5" />
                   </div>
                   <div>
                     <h4 className="font-display text-lg text-[var(--forest-deep)]">{t}</h4>
-                    <p className="mt-1 text-sm text-[var(--ink)]/60">{d}</p>
+                    <p className="mt-1 text-sm text-ink/60">{d}</p>
                   </div>
                 </div>
               </Reveal>
@@ -701,7 +701,7 @@ function ProcessSection() {
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="How We Work" script="Farm to Door" title="A seven-step ritual, refined every day." />
         <div className="relative mt-24">
-          <div aria-hidden className="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-[var(--forest-deep)]/25 to-transparent md:block" />
+          <div aria-hidden className="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-forest-deep/25 to-transparent md:block" />
           <ol className="grid gap-10 md:grid-cols-7 md:gap-4">
             {steps.map((s, i) => (
               <Reveal key={s.t} delay={i * 0.06}>
@@ -713,7 +713,7 @@ function ProcessSection() {
                     </span>
                   </div>
                   <h4 className="mt-5 font-display text-base text-[var(--forest-deep)]">{s.t}</h4>
-                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink)]/60">{s.d}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-ink/60">{s.d}</p>
                 </li>
               </Reveal>
             ))}
@@ -795,7 +795,7 @@ function DeliverySection() {
           <div className="relative mt-16 overflow-hidden rounded-[36px] border border-white/60 bg-white/60 p-8 shadow-[var(--shadow-luxury)] backdrop-blur-xl">
             <div className="relative mx-auto aspect-[4/5] max-w-xl">
               {/* Stylised India silhouette */}
-              <svg viewBox="0 0 400 500" className="absolute inset-0 h-full w-full text-[var(--forest-deep)]/15" fill="currentColor">
+              <svg viewBox="0 0 400 500" className="absolute inset-0 h-full w-full text-forest-deep/15" fill="currentColor">
                 <path d="M180 40 C 220 30, 260 45, 280 70 C 310 90, 320 120, 315 155 C 330 175, 340 200, 330 235 C 345 260, 355 300, 335 340 C 320 370, 300 395, 270 415 C 240 440, 210 465, 195 480 C 180 460, 170 435, 160 410 C 140 395, 115 375, 100 340 C 85 305, 80 265, 95 230 C 80 205, 75 175, 90 145 C 105 115, 130 90, 150 70 C 160 55, 170 45, 180 40 Z" />
               </svg>
               {pins.map((p, i) => (
@@ -830,7 +830,7 @@ function DeliverySection() {
                   </div>
                   <div>
                     <h4 className="font-display text-base text-[var(--forest-deep)]">{f.t}</h4>
-                    <p className="mt-1 text-sm text-[var(--ink)]/60">{f.d}</p>
+                    <p className="mt-1 text-sm text-ink/60">{f.d}</p>
                   </div>
                 </div>
               ))}
@@ -879,7 +879,7 @@ function Testimonials() {
               </p>
               <div className="mt-8">
                 <p className="font-display text-lg text-[var(--forest-deep)]">{t[i].name}</p>
-                <p className="text-xs uppercase tracking-[0.28em] text-[var(--ink)]/50">{t[i].role}</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-ink/50">{t[i].role}</p>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -890,7 +890,7 @@ function Testimonials() {
               key={n}
               aria-label={`Testimonial ${n + 1}`}
               onClick={() => setI(n)}
-              className={`h-1.5 rounded-full transition-all ${n === i ? "w-8 bg-[var(--forest-deep)]" : "w-2 bg-[var(--forest-deep)]/25"}`}
+              className={`h-1.5 rounded-full transition-all ${n === i ? "w-8 bg-[var(--forest-deep)]" : "w-2 bg-forest-deep/25"}`}
             />
           ))}
         </div>
@@ -925,7 +925,7 @@ function Gallery() {
                   alt=""
                   className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-deep)]/60 to-transparent opacity-60 transition group-hover:opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-forest-deep/60 to-transparent opacity-60 transition group-hover:opacity-80" />
               </div>
             </Reveal>
           ))}
@@ -973,7 +973,7 @@ function FAQ() {
                       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                       className="overflow-hidden"
                     >
-                      <p className="px-6 pb-6 text-[var(--ink)]/70">{f.a}</p>
+                      <p className="px-6 pb-6 text-ink/70">{f.a}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -998,29 +998,29 @@ function Contact() {
           <Reveal className="lg:col-span-2">
             <div className="glass h-full rounded-[32px] p-8">
               <h3 className="font-display text-2xl text-[var(--forest-deep)]">Get in touch</h3>
-              <p className="mt-2 text-sm text-[var(--ink)]/65">
+              <p className="mt-2 text-sm text-ink/65">
                 We respond to enquiries within one business day.
               </p>
               <div className="mt-8 space-y-6 text-sm">
                 <a href="tel:8019794244" className="flex items-start gap-4 group">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><Phone className="h-4 w-4" /></div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--ink)]/50">Phone</p>
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Phone</p>
                     <p className="mt-1 font-display text-lg text-[var(--forest-deep)] group-hover:text-[var(--fresh)]">+91 80197 94244</p>
                   </div>
                 </a>
                 <a href="mailto:marinovatefarms@gmail.com" className="flex items-start gap-4 group">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><Mail className="h-4 w-4" /></div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--ink)]/50">Email</p>
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Email</p>
                     <p className="mt-1 font-display text-lg text-[var(--forest-deep)] group-hover:text-[var(--fresh)] break-all">marinovatefarms@gmail.com</p>
                   </div>
                 </a>
                 <div className="flex items-start gap-4">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><MapPin className="h-4 w-4" /></div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--ink)]/50">Address</p>
-                    <p className="mt-1 text-[var(--ink)]/80 leading-relaxed">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Address</p>
+                    <p className="mt-1 text-ink/80 leading-relaxed">
                       Flat No. 201, 2nd Floor, Door No. 1-95/40,<br />
                       Rajiv Nagar, Venkateshwara Colony,<br />
                       Uppal, Hyderabad – 500039
@@ -1030,8 +1030,8 @@ function Contact() {
                 <div className="flex items-start gap-4">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><Clock className="h-4 w-4" /></div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--ink)]/50">Hours</p>
-                    <p className="mt-1 text-[var(--ink)]/80 leading-relaxed">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Hours</p>
+                    <p className="mt-1 text-ink/80 leading-relaxed">
                       Mon – Sat &nbsp; 10:00 AM – 6:00 PM<br />
                       Sun &nbsp; Closed
                     </p>
@@ -1118,7 +1118,7 @@ function Field({
         className={`pointer-events-none absolute left-5 z-10 transition-all duration-300 ${
           active
             ? "top-2 text-[10px] uppercase tracking-[0.22em] text-[var(--forest-deep)]"
-            : "top-1/2 -translate-y-1/2 text-sm text-[var(--ink)]/50"
+            : "top-1/2 -translate-y-1/2 text-sm text-ink/50"
         }`}
       >
         {label}
