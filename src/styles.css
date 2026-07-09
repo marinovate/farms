@@ -59,12 +59,12 @@
 :root {
   --radius: 1.5rem;
   /* Brand tokens */
-  --forest-deep: oklch(0.32 0.06 150);      /* #1E5631 deep forest */
+  --forest-deep: oklch(0.32 0.06 150); /* #1E5631 deep forest */
   --forest: oklch(0.38 0.08 150);
-  --fresh: oklch(0.62 0.17 145);            /* ~ #4CAF50 */
-  --gold: oklch(0.78 0.13 85);              /* ~ #D4AF37 */
-  --cream: oklch(0.976 0.012 90);           /* #FAF8F3 */
-  --ink: oklch(0.18 0.01 150);              /* #1A1A1A */
+  --fresh: oklch(0.62 0.17 145); /* ~ #4CAF50 */
+  --gold: oklch(0.78 0.13 85); /* ~ #D4AF37 */
+  --cream: oklch(0.976 0.012 90); /* #FAF8F3 */
+  --ink: oklch(0.18 0.01 150); /* #1A1A1A */
 
   --background: var(--cream);
   --foreground: var(--ink);
@@ -102,9 +102,14 @@
   /* Signature gradients & shadows */
   --gradient-forest: linear-gradient(135deg, oklch(0.32 0.06 150), oklch(0.42 0.09 150));
   --gradient-gold: linear-gradient(135deg, oklch(0.82 0.14 85), oklch(0.68 0.13 70));
-  --gradient-hero: linear-gradient(180deg, oklch(0.15 0.02 150 / 0.2) 0%, oklch(0.1 0.02 150 / 0.85) 100%);
+  --gradient-hero: linear-gradient(
+    180deg,
+    oklch(0.15 0.02 150 / 0.2) 0%,
+    oklch(0.1 0.02 150 / 0.85) 100%
+  );
   --gradient-cream: radial-gradient(ellipse at top, oklch(0.98 0.02 90), oklch(0.94 0.02 145));
-  --shadow-luxury: 0 30px 60px -20px oklch(0.32 0.06 150 / 0.25), 0 10px 30px -10px oklch(0.32 0.06 150 / 0.15);
+  --shadow-luxury:
+    0 30px 60px -20px oklch(0.32 0.06 150 / 0.25), 0 10px 30px -10px oklch(0.32 0.06 150 / 0.15);
   --shadow-glow: 0 0 60px oklch(0.62 0.17 145 / 0.35);
   --shadow-gold-glow: 0 0 40px oklch(0.78 0.13 85 / 0.4);
   --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
@@ -158,18 +163,25 @@
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+  }
   ::selection {
     background: var(--forest-deep);
     color: var(--cream);
   }
 }
 
-@utility font-script { font-family: var(--font-script); }
+@utility font-script {
+  font-family: var(--font-script);
+}
 
 @utility btn-primary {
   position: relative;
@@ -182,17 +194,32 @@
   color: var(--cream);
   font-weight: 500;
   letter-spacing: 0.02em;
-  box-shadow: var(--shadow-luxury), inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: transform 0.5s var(--ease-luxe), box-shadow 0.5s var(--ease-luxe);
+  box-shadow:
+    var(--shadow-luxury),
+    inset 0 1px 0 oklch(1 0 0 / 0.15);
+  transition:
+    transform 0.5s var(--ease-luxe),
+    box-shadow 0.5s var(--ease-luxe);
   overflow: hidden;
   &::before {
     content: "";
-    position: absolute; inset: 0;
-    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), oklch(0.62 0.17 145 / 0.6), transparent 60%);
-    opacity: 0; transition: opacity 0.4s;
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at var(--mx, 50%) var(--my, 50%),
+      oklch(0.62 0.17 145 / 0.6),
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.4s;
   }
-  &:hover { transform: translateY(-3px); box-shadow: var(--shadow-luxury), var(--shadow-glow); }
-  &:hover::before { opacity: 1; }
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-luxury), var(--shadow-glow);
+  }
+  &:hover::before {
+    opacity: 1;
+  }
 }
 
 @utility btn-ghost {
@@ -240,7 +267,11 @@
   text-transform: uppercase;
   color: var(--forest);
   &::before {
-    content: ""; width: 32px; height: 1px; background: currentColor; opacity: 0.6;
+    content: "";
+    width: 32px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.6;
   }
 }
 
@@ -253,29 +284,86 @@
 }
 
 @keyframes float-y {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-30px) rotate(6deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-30px) rotate(6deg);
+  }
 }
 @keyframes leaf-drift {
-  0% { transform: translate(0,0) rotate(0); opacity: 0; }
-  10% { opacity: 0.7; }
-  100% { transform: translate(60px, 120vh) rotate(720deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(60px, 120vh) rotate(720deg);
+    opacity: 0;
+  }
 }
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
-@utility floaty { animation: float-y 8s ease-in-out infinite; }
+@utility floaty {
+  animation: float-y 8s ease-in-out infinite;
+}
 
 /* Section spacing */
-@utility section-py { padding-top: clamp(6rem, 12vw, 10rem); padding-bottom: clamp(6rem, 12vw, 10rem); }
+@utility section-py {
+  padding-top: clamp(6rem, 12vw, 10rem);
+  padding-bottom: clamp(6rem, 12vw, 10rem);
+}
 
 /* Noise texture overlay */
 @utility noise {
   position: relative;
   &::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/></svg>");
-    opacity: 0.05; mix-blend-mode: overlay;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+  }
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-invoice,
+  #printable-invoice * {
+    visibility: visible;
+  }
+  #printable-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20mm !important; /* Ensure standard padding on paper */
+    background-color: white !important;
+    box-shadow: none !important;
+  }
+  
+  /* Force background colors to print (mostly for badges and headers) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

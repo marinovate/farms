@@ -1,40 +1,136 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
-  Leaf, Fish, Apple, Truck, ShieldCheck, Clock, Package, MapPin, Phone, Mail,
-  Sparkles, ArrowUpRight, ArrowRight, Star, ChevronDown, Snowflake, Search,
-  BadgeCheck, Boxes, Sun, Waves, Heart, Brain, ShoppingCart, Plus, Minus, X,
+  Leaf,
+  Fish,
+  Apple,
+  Truck,
+  ShieldCheck,
+  Clock,
+  Package,
+  MapPin,
+  Phone,
+  Mail,
+  Sparkles,
+  ArrowUpRight,
+  ArrowRight,
+  Star,
+  ChevronDown,
+  Snowflake,
+  Search,
+  BadgeCheck,
+  Boxes,
+  Sun,
+  Waves,
+  Heart,
+  Brain,
+  ShoppingCart,
+  Plus,
+  Minus,
+  X,
+  User,
 } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
 import vegImg from "@/assets/vegetables.jpg";
 import fruitImg from "@/assets/fruits.jpg";
 import seaImg from "@/assets/seafood.jpg";
 import storyImg from "@/assets/story.jpg";
-
+import { useNavigate, Link } from "@tanstack/react-router";
+import { useCartStore } from "@/store/useCartStore";
+import { supabase } from "@/lib/supabase";
+import { useLikeStore } from "@/store/useLikeStore";
 export type Product = {
   id: string;
   name: string;
-  category: "Vegetables" | "Fruits" | "Seafood";
+  category: string;
   price: string;
+  original_price?: string;
   image: string;
 };
 
 export type CartItem = Product & { quantity: number };
 
 const ALL_PRODUCTS: Product[] = [
-  { id: "v1", name: "Farm Fresh Tomatoes", category: "Vegetables", price: "₹40 / kg", image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&q=80" },
-  { id: "v2", name: "Red Onions", category: "Vegetables", price: "₹35 / kg", image: "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=800&q=80" },
-  { id: "v3", name: "Potatoes", category: "Vegetables", price: "₹30 / kg", image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800&q=80" },
-  { id: "v4", name: "Fresh Carrots", category: "Vegetables", price: "₹60 / kg", image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=800&q=80" },
-  { id: "v5", name: "Spinach (Palak)", category: "Vegetables", price: "₹25 / bunch", image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=800&q=80" },
+  {
+    id: "v1",
+    name: "Farm Fresh Tomatoes",
+    category: "Vegetables",
+    price: "₹40 / kg",
+    image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&q=80",
+  },
+  {
+    id: "v2",
+    name: "Red Onions",
+    category: "Vegetables",
+    price: "₹35 / kg",
+    image: "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=800&q=80",
+  },
+  {
+    id: "v3",
+    name: "Potatoes",
+    category: "Vegetables",
+    price: "₹30 / kg",
+    image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800&q=80",
+  },
+  {
+    id: "v4",
+    name: "Fresh Carrots",
+    category: "Vegetables",
+    price: "₹60 / kg",
+    image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=800&q=80",
+  },
+  {
+    id: "v5",
+    name: "Spinach (Palak)",
+    category: "Vegetables",
+    price: "₹25 / bunch",
+    image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=800&q=80",
+  },
 
-  { id: "f1", name: "Alphonso Mangoes", category: "Fruits", price: "₹800 / doz", image: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&q=80" },
-  { id: "f2", name: "Robusta Bananas", category: "Fruits", price: "₹60 / doz", image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=800&q=80" },
-  { id: "f3", name: "Kashmir Apples", category: "Fruits", price: "₹200 / kg", image: "https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?w=800&q=80" },
-  { id: "f4", name: "Pomegranates", category: "Fruits", price: "₹250 / kg", image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80" },
+  {
+    id: "f1",
+    name: "Alphonso Mangoes",
+    category: "Fruits",
+    price: "₹800 / doz",
+    image: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&q=80",
+  },
+  {
+    id: "f2",
+    name: "Robusta Bananas",
+    category: "Fruits",
+    price: "₹60 / doz",
+    image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=800&q=80",
+  },
+  {
+    id: "f3",
+    name: "Kashmir Apples",
+    category: "Fruits",
+    price: "₹200 / kg",
+    image: "https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?w=800&q=80",
+  },
+  {
+    id: "f4",
+    name: "Pomegranates",
+    category: "Fruits",
+    price: "₹250 / kg",
+    image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80",
+  },
 
-  { id: "s1", name: "Tiger Prawns", category: "Seafood", price: "₹900 / kg", image: "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=800&q=80" },
-  { id: "s2", name: "Seer Fish (Surmai)", category: "Seafood", price: "₹1200 / kg", image: "https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=800&q=80" },
+  {
+    id: "s1",
+    name: "Tiger Prawns",
+    category: "Seafood",
+    price: "₹900 / kg",
+    image: "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=800&q=80",
+  },
+  {
+    id: "s2",
+    name: "Seer Fish (Surmai)",
+    category: "Seafood",
+    price: "₹1200 / kg",
+    image: "https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=800&q=80",
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -74,12 +170,10 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
             : "border-white/25 bg-white/10 backdrop-blur-md"
         } px-3 py-2`}
       >
-        <a href="#top" className="flex items-center gap-2 rounded-full px-4 py-1.5">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--forest-deep)] text-[var(--cream)]">
-            <Leaf className="h-4 w-4" />
-          </span>
-          <span className="font-display text-[15px] font-semibold tracking-tight text-[var(--forest-deep)]">
-            Marinovate<span className="text-[var(--gold)]">.</span>
+        <a href="#top" className="flex items-center gap-3 pl-1 pr-4 py-1">
+          <img src="/logo.png" alt="Marinovate Farms" className="h-12 w-12 sm:h-14 sm:w-14 object-contain rounded-xl bg-white shadow-sm" />
+          <span className={`font-display text-[18px] font-bold tracking-tight uppercase mt-1 ${scrolled ? 'text-gray-900' : 'text-white'}`}>
+            Marinovate Farms
           </span>
         </a>
         <div className="mx-2 hidden h-6 w-px bg-black/10 md:block" />
@@ -88,7 +182,7 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
             <li key={href}>
               <a
                 href={href}
-                className="rounded-full px-4 py-1.5 text-sm text-white transition hover:bg-white/20 hover:text-white"
+                className={`rounded-full px-4 py-1.5 text-sm transition ${scrolled ? 'text-gray-700 hover:bg-black/5 hover:text-gray-900' : 'text-white hover:bg-white/20 hover:text-white'}`}
               >
                 {label}
               </a>
@@ -102,6 +196,12 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
           >
             Bulk Quote <ArrowUpRight className="h-3.5 w-3.5" />
           </a>
+          <Link
+            to="/profile"
+            className={`relative grid h-9 w-9 place-items-center rounded-full shadow transition hover:scale-105 ${scrolled ? 'bg-black/5 text-gray-900 hover:bg-black/10' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          >
+            <User className="h-4 w-4" />
+          </Link>
           <button
             onClick={onOpenCart}
             className="relative grid h-9 w-9 place-items-center rounded-full bg-[var(--gold)] text-[var(--ink)] shadow transition hover:scale-105"
@@ -166,7 +266,10 @@ function Hero() {
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,20,15,0.35)_0%,rgba(10,20,15,0.55)_50%,rgba(10,20,15,0.9)_100%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.5)_100%)]" />
 
-      <motion.div style={{ opacity }} className="relative z-10 flex h-full items-center px-6 md:px-12">
+      <motion.div
+        style={{ opacity }}
+        className="relative z-10 flex h-full items-center px-6 md:px-12"
+      >
         <div className="mx-auto max-w-6xl">
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -198,8 +301,8 @@ function Hero() {
             transition={{ delay: 0.6, duration: 0.9 }}
             className="mt-8 max-w-2xl text-[17px] leading-relaxed text-white/75"
           >
-            From farms and oceans to your business — fresh vegetables, fruits and seafood,
-            delivered with quality, hygiene and trust.
+            From farms and oceans to your business — fresh vegetables, fruits and seafood, delivered
+            with quality, hygiene and trust.
           </motion.p>
 
           <motion.div
@@ -259,7 +362,15 @@ function Hero() {
 /* ------------------------------------------------------------------ */
 /* Section helpers                                                    */
 /* ------------------------------------------------------------------ */
-function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -274,12 +385,24 @@ function Reveal({ children, delay = 0, className }: { children: React.ReactNode;
 }
 
 function SectionHeader({
-  eyebrow, script, title, subtitle, align = "center",
-}: { eyebrow?: string; script?: string; title: string; subtitle?: string; align?: "center" | "left" }) {
+  eyebrow,
+  script,
+  title,
+  subtitle,
+  align = "center",
+}: {
+  eyebrow?: string;
+  script?: string;
+  title: string;
+  subtitle?: string;
+  align?: "center" | "left";
+}) {
   return (
     <div className={`mx-auto max-w-3xl ${align === "center" ? "text-center" : "text-left"}`}>
       {eyebrow && (
-        <Reveal><p className="eyebrow mb-4">{eyebrow}</p></Reveal>
+        <Reveal>
+          <p className="eyebrow mb-4">{eyebrow}</p>
+        </Reveal>
       )}
       {script && (
         <Reveal delay={0.05}>
@@ -305,14 +428,46 @@ function SectionHeader({
 /* ------------------------------------------------------------------ */
 function WhySection() {
   const items = [
-    { icon: Leaf, title: "Farm Fresh", body: "Harvested at peak ripeness, on the field only hours before it reaches you." },
-    { icon: ShieldCheck, title: "100% Quality Checked", body: "Multi-stage inspection for grade, freshness, and food-safety compliance." },
-    { icon: Clock, title: "Timely Delivery", body: "Scheduled dispatch windows built for kitchens that run on the clock." },
-    { icon: Boxes, title: "Bulk Supply", body: "Wholesale volumes for hotels, retail chains, exporters and institutions." },
-    { icon: MapPin, title: "Pan India Delivery", body: "A cold-chain logistics network reaching cities across the country." },
-    { icon: Package, title: "Hygienic Packaging", body: "Food-grade, tamper-evident packing that protects freshness in transit." },
-    { icon: BadgeCheck, title: "Affordable Pricing", body: "Direct farm & fishery sourcing lets us offer premium quality, fairly priced." },
-    { icon: Sparkles, title: "Trusted Partner", body: "Long-term supply relationships built on consistency and communication." },
+    {
+      icon: Leaf,
+      title: "Farm Fresh",
+      body: "Harvested at peak ripeness, on the field only hours before it reaches you.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "100% Quality Checked",
+      body: "Multi-stage inspection for grade, freshness, and food-safety compliance.",
+    },
+    {
+      icon: Clock,
+      title: "Timely Delivery",
+      body: "Scheduled dispatch windows built for kitchens that run on the clock.",
+    },
+    {
+      icon: Boxes,
+      title: "Bulk Supply",
+      body: "Wholesale volumes for hotels, retail chains, exporters and institutions.",
+    },
+    {
+      icon: MapPin,
+      title: "Pan India Delivery",
+      body: "A cold-chain logistics network reaching cities across the country.",
+    },
+    {
+      icon: Package,
+      title: "Hygienic Packaging",
+      body: "Food-grade, tamper-evident packing that protects freshness in transit.",
+    },
+    {
+      icon: BadgeCheck,
+      title: "Affordable Pricing",
+      body: "Direct farm & fishery sourcing lets us offer premium quality, fairly priced.",
+    },
+    {
+      icon: Sparkles,
+      title: "Trusted Partner",
+      body: "Long-term supply relationships built on consistency and communication.",
+    },
   ];
   return (
     <section className="section-py relative px-6 md:px-12">
@@ -355,33 +510,17 @@ function WhySection() {
 /* Cart Sidebar                                                        */
 /* ------------------------------------------------------------------ */
 function CartSidebar({
-  isOpen, onClose, cart, updateQuantity,
+  isOpen,
+  onClose,
+  cart,
+  updateQuantity,
 }: {
   isOpen: boolean;
   onClose: () => void;
   cart: CartItem[];
   updateQuantity: (id: string, delta: number) => void;
 }) {
-  const handleCheckout = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const address = formData.get("address") as string;
-    
-    if (cart.length === 0) return alert("Your cart is empty!");
-
-    const orderDetails = cart.map(item => `${item.name} (Qty: ${item.quantity}) - ${item.price}`).join("\n");
-    
-    const text = `*New Order from Website*
-*Name:* ${name}
-*Address:* ${address}
-
-*Order Details:*
-${orderDetails}`;
-
-    const encoded = encodeURIComponent(text);
-    window.open(`https://wa.me/918019794244?text=${encoded}`, "_blank");
-  };
+  const navigate = useNavigate();
 
   return (
     <AnimatePresence>
@@ -403,11 +542,14 @@ ${orderDetails}`;
           >
             <div className="flex items-center justify-between border-b border-gray-100 p-6">
               <h2 className="font-display text-2xl text-[var(--forest-deep)]">Your Cart</h2>
-              <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 transition hover:bg-gray-200">
+              <button
+                onClick={onClose}
+                className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 transition hover:bg-gray-200"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6">
               {cart.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-gray-400">
@@ -416,20 +558,30 @@ ${orderDetails}`;
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {cart.map(item => (
+                  {cart.map((item) => (
                     <div key={item.id} className="flex gap-4">
-                      <img src={item.image} alt={item.name} className="h-20 w-20 rounded-xl object-cover" />
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="h-20 w-20 rounded-xl object-cover"
+                      />
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
                           <h4 className="font-medium text-gray-900">{item.name}</h4>
                           <p className="text-sm text-gray-500">{item.price}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50">
+                          <button
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50"
+                          >
                             <Minus className="h-3 w-3" />
                           </button>
                           <span className="text-sm font-medium">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50">
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50"
+                          >
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
@@ -442,19 +594,15 @@ ${orderDetails}`;
 
             {cart.length > 0 && (
               <div className="border-t border-gray-100 bg-gray-50 p-6">
-                <form onSubmit={handleCheckout} className="space-y-4">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500 uppercase">Full Name</label>
-                    <input type="text" name="name" required className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:border-[var(--forest-deep)]" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500 uppercase">Delivery Address</label>
-                    <textarea name="address" required rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:border-[var(--forest-deep)]" />
-                  </div>
-                  <button type="submit" className="w-full rounded-xl bg-[var(--forest-deep)] py-3 text-sm font-medium text-white transition hover:bg-[var(--forest)]">
-                    Checkout via WhatsApp
-                  </button>
-                </form>
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigate({ to: '/checkout' });
+                  }}
+                  className="w-full rounded-xl bg-[var(--forest-deep)] py-3 text-sm font-medium text-white transition hover:bg-[var(--forest)]"
+                >
+                  Proceed to Checkout
+                </button>
               </div>
             )}
           </motion.div>
@@ -464,78 +612,157 @@ ${orderDetails}`;
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Products                                                            */
-/* ------------------------------------------------------------------ */
-function ProductsSection({ addToCart }: { addToCart: (p: Product) => void }) {
-  const [activeTab, setActiveTab] = useState<"All" | "Vegetables" | "Fruits" | "Seafood">("All");
+export function ProductCard({ p, addToCart }: { p: Product; addToCart: (p: Product) => void }) {
+  const navigate = useNavigate();
+  const { likedIds, toggleLike } = useLikeStore();
+  const isLiked = likedIds.includes(p.id);
 
-  const filtered = ALL_PRODUCTS.filter(p => activeTab === "All" || p.category === activeTab);
+  const handleAddToCart = () => {
+    addToCart(p);
+    toast.success("Added to cart");
+  };
 
   return (
-    <section id="products" className="section-py relative px-6 md:px-12">
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3 }}
+      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-forest-deep/5 transition-all"
+    >
+      <div className="aspect-[4/3] overflow-hidden bg-gray-100 relative">
+        <img
+          src={p.image}
+          alt={p.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+        />
+        <button 
+          onClick={() => toggleLike(p, navigate)}
+          className="absolute top-3 right-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/80 backdrop-blur-sm text-gray-500 hover:text-red-500 transition-colors shadow-sm"
+        >
+          <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+        </button>
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <span className="mb-2 w-fit rounded-full bg-[var(--fresh)]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--forest-deep)]">
+          {p.category}
+        </span>
+        <h3 className="font-display text-lg text-gray-900">{p.name}</h3>
+        <p className="mt-1 text-sm font-medium text-gray-900 flex items-center gap-2">
+          {p.price}
+          {p.original_price && (
+            <span className="text-red-500 line-through text-xs">{p.original_price}</span>
+          )}
+        </p>
+
+        <div className="mt-6 mt-auto">
+          <button
+            onClick={handleAddToCart}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-50 py-2.5 text-sm font-medium text-[var(--forest-deep)] transition hover:bg-[var(--forest-deep)] hover:text-white"
+          >
+            <Plus className="h-4 w-4" /> Add to Cart
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function TrendingSection({ addToCart }: { addToCart: (p: Product) => void }) {
+  const [trending, setTrending] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      const { data } = await supabase.from('products').select('*').eq('trending', true).limit(4);
+      if (data && data.length > 0) {
+        setTrending(data.map(p => ({
+          id: p.id,
+          name: p.title,
+          category: p.category || "Vegetables",
+          price: `₹${p.price}`,
+          original_price: p.original_price ? `₹${p.original_price}` : undefined,
+          image: p.image_url || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&q=80'
+        } as Product)));
+      }
+    };
+    fetchTrending();
+  }, []);
+
+  if (trending.length === 0) return null;
+
+  return (
+    <section className="pt-32 relative px-6 md:px-12 bg-white">
       <div className="mx-auto max-w-7xl">
         <SectionHeader
-          eyebrow="Our Products"
-          script="Farm to Table"
-          title="A curated pantry of the freshest India has to offer."
+          eyebrow="Trending Now"
+          script="Customer Favorites"
+          title="Most loved by our community."
         />
-        
-        <div className="mt-12 flex flex-wrap justify-center gap-2">
-          {["All", "Vegetables", "Fruits", "Seafood"].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`rounded-full px-6 py-2 text-sm font-medium transition ${
-                activeTab === tab
-                  ? "bg-[var(--forest-deep)] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((p) => (
-              <motion.div
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-                key={p.id}
-                className="group relative flex flex-col overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-forest-deep/5 transition-all"
-              >
-                <div className="aspect-[4/3] overflow-hidden bg-gray-100">
-                  <img src={p.image} alt={p.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
-                </div>
-                <div className="flex flex-1 flex-col p-5">
-                  <span className="mb-2 w-fit rounded-full bg-[var(--fresh)]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--forest-deep)]">
-                    {p.category}
-                  </span>
-                  <h3 className="font-display text-lg text-gray-900">{p.name}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{p.price}</p>
-                  
-                  <div className="mt-6 mt-auto">
-                    <button
-                      onClick={() => addToCart(p)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-50 py-2.5 text-sm font-medium text-[var(--forest-deep)] transition hover:bg-[var(--forest-deep)] hover:text-white"
-                    >
-                      <Plus className="h-4 w-4" /> Add to Cart
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {trending.map((p) => (
+            <ProductCard key={p.id} p={p} addToCart={addToCart} />
+          ))}
         </div>
       </div>
     </section>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Shop By Category                                                    */
+/* ------------------------------------------------------------------ */
+function ShopByCategorySection() {
+  const [categories, setCategories] = useState<{ id: string; name: string; image_url?: string }[]>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase.from('categories').select('*').order('name');
+      if (data) {
+        setCategories(data);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  if (categories.length === 0) return null;
+
+  return (
+    <section id="categories" className="section-py relative px-6 md:px-12 bg-gray-50/50">
+      <div className="mx-auto max-w-7xl">
+        <SectionHeader
+          eyebrow="Shop By Category"
+          script="Fresh selections"
+          title="Explore our premium offerings"
+        />
+
+        <div className="mt-12 flex flex-wrap justify-center gap-6 md:gap-10">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => navigate({ to: '/category/$categoryName', params: { categoryName: cat.name } })}
+              className="group flex flex-col items-center gap-4 focus:outline-none"
+            >
+              <div className="relative h-32 w-32 md:h-40 md:w-40 overflow-hidden rounded-full border-4 border-white shadow-[var(--shadow-luxury)] transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_20px_40px_-15px_rgba(30,86,49,0.3)] bg-white">
+                {cat.image_url ? (
+                  <img src={cat.image_url} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                ) : (
+                  <div className="h-full w-full bg-[var(--forest-deep)]/10 flex items-center justify-center">
+                    <span className="text-4xl">🌱</span>
+                  </div>
+                )}
+              </div>
+              <h3 className="font-display text-lg font-semibold text-gray-900 group-hover:text-[var(--forest-deep)] transition-colors">{cat.name}</h3>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Story                                                               */
@@ -557,7 +784,12 @@ function StorySection() {
         <Reveal>
           <div className="relative">
             <div className="relative overflow-hidden rounded-[36px] shadow-[var(--shadow-luxury)]">
-              <img src={storyImg} alt="Golden hour farm" loading="lazy" className="h-[620px] w-full object-cover" />
+              <img
+                src={storyImg}
+                alt="Golden hour farm"
+                loading="lazy"
+                className="h-[620px] w-full object-cover"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-forest-deep/40 to-transparent" />
             </div>
             <motion.div
@@ -576,7 +808,9 @@ function StorySection() {
                   <p className="font-display text-lg text-[var(--forest-deep)]">This morning</p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-ink/70">Every crate is picked, checked and packed within a single sunrise window.</p>
+              <p className="mt-4 text-sm text-ink/70">
+                Every crate is picked, checked and packed within a single sunrise window.
+              </p>
             </motion.div>
           </div>
         </Reveal>
@@ -591,8 +825,8 @@ function StorySection() {
           </Reveal>
           <Reveal delay={0.1}>
             <p className="mt-6 max-w-lg text-ink/65">
-              Marinovate Farms exists to shorten the distance between the farm, the fishery and your kitchen —
-              without ever cutting corners on quality, hygiene or timing.
+              Marinovate Farms exists to shorten the distance between the farm, the fishery and your
+              kitchen — without ever cutting corners on quality, hygiene or timing.
             </p>
           </Reveal>
           <div className="mt-10 grid gap-x-8 gap-y-6 sm:grid-cols-2">
@@ -622,15 +856,21 @@ function StorySection() {
 function HealthSection() {
   const groups = [
     {
-      icon: Leaf, title: "Fresh Vegetables", tint: "from-[var(--fresh)]/25 to-transparent",
+      icon: Leaf,
+      title: "Fresh Vegetables",
+      tint: "from-[var(--fresh)]/25 to-transparent",
       items: ["Rich in vitamins", "Dietary fiber", "Essential minerals", "Immune support"],
     },
     {
-      icon: Apple, title: "Fresh Fruits", tint: "from-[var(--gold)]/25 to-transparent",
+      icon: Apple,
+      title: "Fresh Fruits",
+      tint: "from-[var(--gold)]/25 to-transparent",
       items: ["Natural sugars", "Antioxidants", "Vitamin C", "Hydration"],
     },
     {
-      icon: Fish, title: "Fresh Seafood", tint: "from-[var(--forest)]/25 to-transparent",
+      icon: Fish,
+      title: "Fresh Seafood",
+      tint: "from-[var(--forest)]/25 to-transparent",
       items: ["High protein", "Omega-3", "Heart health", "Brain health"],
     },
   ];
@@ -659,7 +899,9 @@ function HealthSection() {
         <div className="mt-20 grid gap-8 md:grid-cols-3">
           {groups.map((g, i) => (
             <Reveal key={g.title} delay={i * 0.1}>
-              <div className={`relative h-full overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br ${g.tint} p-8 backdrop-blur-xl`}>
+              <div
+                className={`relative h-full overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br ${g.tint} p-8 backdrop-blur-xl`}
+              >
                 <div className="absolute inset-0 bg-white/[0.03]" />
                 <div className="relative">
                   <div className="mb-8 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-[var(--gold)] backdrop-blur">
@@ -699,9 +941,16 @@ function ProcessSection() {
   return (
     <section className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="How We Work" script="Farm to Door" title="A seven-step ritual, refined every day." />
+        <SectionHeader
+          eyebrow="How We Work"
+          script="Farm to Door"
+          title="A seven-step ritual, refined every day."
+        />
         <div className="relative mt-24">
-          <div aria-hidden className="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-forest-deep/25 to-transparent md:block" />
+          <div
+            aria-hidden
+            className="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-forest-deep/25 to-transparent md:block"
+          />
           <ol className="grid gap-10 md:grid-cols-7 md:gap-4">
             {steps.map((s, i) => (
               <Reveal key={s.t} delay={i * 0.06}>
@@ -728,7 +977,14 @@ function ProcessSection() {
 /* Bulk Orders                                                         */
 /* ------------------------------------------------------------------ */
 function BulkSection() {
-  const audiences = ["Hotels", "Restaurants", "Corporate Kitchens", "Retail Stores", "Export", "Wholesalers"];
+  const audiences = [
+    "Hotels",
+    "Restaurants",
+    "Corporate Kitchens",
+    "Retail Stores",
+    "Export",
+    "Wholesalers",
+  ];
   return (
     <section id="bulk" className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-7xl">
@@ -746,8 +1002,8 @@ function BulkSection() {
                   Wholesale-grade freshness for businesses that never sleep.
                 </h2>
                 <p className="mt-6 max-w-lg text-white/70">
-                  Whether you're plating for guests, stocking shelves, or preparing an export container —
-                  our sourcing and cold chain scale with your operation.
+                  Whether you're plating for guests, stocking shelves, or preparing an export
+                  container — our sourcing and cold chain scale with your operation.
                 </p>
                 <a href="#contact" className="btn-primary mt-10 group">
                   Request Bulk Quote
@@ -756,7 +1012,10 @@ function BulkSection() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {audiences.map((a) => (
-                  <div key={a} className="rounded-2xl border border-white/15 bg-white/[0.06] p-5 text-white backdrop-blur-md transition hover:border-[var(--gold)]/60 hover:bg-white/[0.1]">
+                  <div
+                    key={a}
+                    className="rounded-2xl border border-white/15 bg-white/[0.06] p-5 text-white backdrop-blur-md transition hover:border-[var(--gold)]/60 hover:bg-white/[0.1]"
+                  >
                     <div className="flex items-center gap-2 text-[var(--gold)]">
                       <Sparkles className="h-4 w-4" />
                       <span className="text-[10px] uppercase tracking-[0.28em]">Supplied for</span>
@@ -790,12 +1049,20 @@ function DeliverySection() {
   return (
     <section id="delivery" className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="Pan India Delivery" script="Wherever You Are" title="One cold chain. Every corner of India." />
+        <SectionHeader
+          eyebrow="Pan India Delivery"
+          script="Wherever You Are"
+          title="One cold chain. Every corner of India."
+        />
         <Reveal delay={0.1}>
           <div className="relative mt-16 overflow-hidden rounded-[36px] border border-white/60 bg-white/60 p-8 shadow-[var(--shadow-luxury)] backdrop-blur-xl">
             <div className="relative mx-auto aspect-[4/5] max-w-xl">
               {/* Stylised India silhouette */}
-              <svg viewBox="0 0 400 500" className="absolute inset-0 h-full w-full text-forest-deep/15" fill="currentColor">
+              <svg
+                viewBox="0 0 400 500"
+                className="absolute inset-0 h-full w-full text-forest-deep/15"
+                fill="currentColor"
+              >
                 <path d="M180 40 C 220 30, 260 45, 280 70 C 310 90, 320 120, 315 155 C 330 175, 340 200, 330 235 C 345 260, 355 300, 335 340 C 320 370, 300 395, 270 415 C 240 440, 210 465, 195 480 C 180 460, 170 435, 160 410 C 140 395, 115 375, 100 340 C 85 305, 80 265, 95 230 C 80 205, 75 175, 90 145 C 105 115, 130 90, 150 70 C 160 55, 170 45, 180 40 Z" />
               </svg>
               {pins.map((p, i) => (
@@ -804,7 +1071,12 @@ function DeliverySection() {
                   initial={{ opacity: 0, scale: 0 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
-                  transition={{ delay: 0.3 + i * 0.12, type: "spring", stiffness: 200, damping: 15 }}
+                  transition={{
+                    delay: 0.3 + i * 0.12,
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 15,
+                  }}
                   className="absolute -translate-x-1/2 -translate-y-1/2"
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
                 >
@@ -847,10 +1119,26 @@ function DeliverySection() {
 /* ------------------------------------------------------------------ */
 function Testimonials() {
   const t = [
-    { name: "Arjun Menon", role: "Executive Chef, Coastal Kitchen", body: "The seafood arrives with the polish of an in-house sourcing team. Consistent quality, week after week." },
-    { name: "Priya Reddy", role: "Purchasing Head, Grand Retreat Hotels", body: "Marinovate has redefined our produce standards. Even at scale, freshness never dips." },
-    { name: "Vikram Shah", role: "Founder, Green Basket Retail", body: "Their cold chain is exceptional. Our shrinkage dropped and customer feedback shot up." },
-    { name: "Neha Kapoor", role: "Head of Ops, CloudMeals", body: "Reliable timing is our lifeline. Marinovate delivers on the minute — and on the mark." },
+    {
+      name: "Arjun Menon",
+      role: "Executive Chef, Coastal Kitchen",
+      body: "The seafood arrives with the polish of an in-house sourcing team. Consistent quality, week after week.",
+    },
+    {
+      name: "Priya Reddy",
+      role: "Purchasing Head, Grand Retreat Hotels",
+      body: "Marinovate has redefined our produce standards. Even at scale, freshness never dips.",
+    },
+    {
+      name: "Vikram Shah",
+      role: "Founder, Green Basket Retail",
+      body: "Their cold chain is exceptional. Our shrinkage dropped and customer feedback shot up.",
+    },
+    {
+      name: "Neha Kapoor",
+      role: "Head of Ops, CloudMeals",
+      body: "Reliable timing is our lifeline. Marinovate delivers on the minute — and on the mark.",
+    },
   ];
   const [i, setI] = useState(0);
   useEffect(() => {
@@ -860,7 +1148,11 @@ function Testimonials() {
   return (
     <section className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-5xl">
-        <SectionHeader eyebrow="Testimonials" script="Trusted Voices" title="What our partners say." />
+        <SectionHeader
+          eyebrow="Testimonials"
+          script="Trusted Voices"
+          title="What our partners say."
+        />
         <div className="relative mt-16 h-[280px]">
           <AnimatePresence mode="wait">
             <motion.div
@@ -872,7 +1164,9 @@ function Testimonials() {
               className="glass absolute inset-0 flex flex-col items-center justify-center rounded-[32px] p-10 text-center"
             >
               <div className="mb-5 flex gap-1 text-[var(--gold)]">
-                {[0, 1, 2, 3, 4].map((n) => <Star key={n} className="h-4 w-4 fill-current" />)}
+                {[0, 1, 2, 3, 4].map((n) => (
+                  <Star key={n} className="h-4 w-4 fill-current" />
+                ))}
               </div>
               <p className="max-w-2xl font-display text-2xl italic leading-relaxed text-[var(--forest-deep)] md:text-3xl">
                 “{t[i].body}”
@@ -914,7 +1208,11 @@ function Gallery() {
   return (
     <section className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="Gallery" script="Moments of Freshness" title="A glimpse inside our farms & fisheries." />
+        <SectionHeader
+          eyebrow="Gallery"
+          script="Moments of Freshness"
+          title="A glimpse inside our farms & fisheries."
+        />
         <div className="mt-16 grid auto-rows-[220px] grid-cols-2 gap-4 md:grid-cols-4">
           {items.map((it, i) => (
             <Reveal key={i} delay={(i % 4) * 0.05}>
@@ -940,11 +1238,26 @@ function Gallery() {
 /* ------------------------------------------------------------------ */
 function FAQ() {
   const faqs = [
-    { q: "Which cities do you deliver to across India?", a: "We deliver to major metros and tier-1 cities with an expanding cold-chain footprint. Reach out with your location and we'll confirm serviceability and lead time." },
-    { q: "Do you accept bulk orders for hotels and retail chains?", a: "Yes — bulk supply is our specialty. We work with hotels, restaurants, corporate kitchens, retail chains, exporters and wholesalers on custom SKU lists and delivery schedules." },
-    { q: "How do you ensure freshness during transit?", a: "Every consignment travels through a temperature-controlled cold chain: refrigerated storage, insulated packaging, and refrigerated fleet or express cold logistics partners." },
-    { q: "Is your seafood export-quality?", a: "Absolutely. Our seafood is sourced directly from coastal fisheries, graded, ice-packed and moved through strict cold chain — with export-grade options available on request." },
-    { q: "What is the minimum order quantity?", a: "MOQs depend on product and destination city. Share your requirement and we'll build a quote around your volume and cadence." },
+    {
+      q: "Which cities do you deliver to across India?",
+      a: "We deliver to major metros and tier-1 cities with an expanding cold-chain footprint. Reach out with your location and we'll confirm serviceability and lead time.",
+    },
+    {
+      q: "Do you accept bulk orders for hotels and retail chains?",
+      a: "Yes — bulk supply is our specialty. We work with hotels, restaurants, corporate kitchens, retail chains, exporters and wholesalers on custom SKU lists and delivery schedules.",
+    },
+    {
+      q: "How do you ensure freshness during transit?",
+      a: "Every consignment travels through a temperature-controlled cold chain: refrigerated storage, insulated packaging, and refrigerated fleet or express cold logistics partners.",
+    },
+    {
+      q: "Is your seafood export-quality?",
+      a: "Absolutely. Our seafood is sourced directly from coastal fisheries, graded, ice-packed and moved through strict cold chain — with export-grade options available on request.",
+    },
+    {
+      q: "What is the minimum order quantity?",
+      a: "MOQs depend on product and destination city. Share your requirement and we'll build a quote around your volume and cadence.",
+    },
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
@@ -960,7 +1273,9 @@ function FAQ() {
                   className="flex w-full items-center justify-between gap-6 p-6 text-left"
                 >
                   <span className="font-display text-lg text-[var(--forest-deep)]">{f.q}</span>
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--forest-deep)] text-white transition-transform ${open === i ? "rotate-180" : ""}`}>
+                  <span
+                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--forest-deep)] text-white transition-transform ${open === i ? "rotate-180" : ""}`}
+                  >
                     <ChevronDown className="h-4 w-4" />
                   </span>
                 </button>
@@ -993,7 +1308,11 @@ function Contact() {
   return (
     <section id="contact" className="section-py relative px-6 md:px-12">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="Contact" script="Let's Talk" title="Fresh conversations start here." />
+        <SectionHeader
+          eyebrow="Contact"
+          script="Let's Talk"
+          title="Fresh conversations start here."
+        />
         <div className="mt-16 grid gap-8 lg:grid-cols-5">
           <Reveal className="lg:col-span-2">
             <div className="glass h-full rounded-[32px] p-8">
@@ -1003,36 +1322,51 @@ function Contact() {
               </p>
               <div className="mt-8 space-y-6 text-sm">
                 <a href="tel:8019794244" className="flex items-start gap-4 group">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><Phone className="h-4 w-4" /></div>
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]">
+                    <Phone className="h-4 w-4" />
+                  </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Phone</p>
-                    <p className="mt-1 font-display text-lg text-[var(--forest-deep)] group-hover:text-[var(--fresh)]">+91 80197 94244</p>
+                    <p className="mt-1 font-display text-lg text-[var(--forest-deep)] group-hover:text-[var(--fresh)]">
+                      +91 80197 94244
+                    </p>
                   </div>
                 </a>
                 <a href="mailto:marinovatefarms@gmail.com" className="flex items-start gap-4 group">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><Mail className="h-4 w-4" /></div>
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]">
+                    <Mail className="h-4 w-4" />
+                  </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Email</p>
-                    <p className="mt-1 font-display text-lg text-[var(--forest-deep)] group-hover:text-[var(--fresh)] break-all">marinovatefarms@gmail.com</p>
+                    <p className="mt-1 font-display text-lg text-[var(--forest-deep)] group-hover:text-[var(--fresh)] break-all">
+                      marinovatefarms@gmail.com
+                    </p>
                   </div>
                 </a>
                 <div className="flex items-start gap-4">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><MapPin className="h-4 w-4" /></div>
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]">
+                    <MapPin className="h-4 w-4" />
+                  </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Address</p>
                     <p className="mt-1 text-ink/80 leading-relaxed">
-                      Flat No. 201, 2nd Floor, Door No. 1-95/40,<br />
-                      Rajiv Nagar, Venkateshwara Colony,<br />
+                      Flat No. 201, 2nd Floor, Door No. 1-95/40,
+                      <br />
+                      Rajiv Nagar, Venkateshwara Colony,
+                      <br />
                       Uppal, Hyderabad – 500039
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]"><Clock className="h-4 w-4" /></div>
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--forest-deep)] text-[var(--cream)]">
+                    <Clock className="h-4 w-4" />
+                  </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Hours</p>
                     <p className="mt-1 text-ink/80 leading-relaxed">
-                      Mon – Sat &nbsp; 10:00 AM – 6:00 PM<br />
+                      Mon – Sat &nbsp; 10:00 AM – 6:00 PM
+                      <br />
                       Sun &nbsp; Closed
                     </p>
                   </div>
@@ -1075,14 +1409,19 @@ function Contact() {
                 <Field label="Email" name="email" type="email" required />
                 <Field label="Phone" name="phone" type="tel" />
                 <div className="sm:col-span-2">
-                  <Field label="Product interest" name="interest" placeholder="Vegetables, Fruits, Seafood, Bulk…" />
+                  <Field
+                    label="Product interest"
+                    name="interest"
+                    placeholder="Vegetables, Fruits, Seafood, Bulk…"
+                  />
                 </div>
                 <div className="sm:col-span-2">
                   <Field label="Message" name="message" as="textarea" />
                 </div>
               </div>
               <button type="submit" className="btn-primary mt-8 group w-full sm:w-auto">
-                Send Enquiry <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                Send Enquiry{" "}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </form>
           </Reveal>
@@ -1105,8 +1444,20 @@ function Contact() {
 }
 
 function Field({
-  label, name, type = "text", as, placeholder, required,
-}: { label: string; name: string; type?: string; as?: "textarea"; placeholder?: string; required?: boolean }) {
+  label,
+  name,
+  type = "text",
+  as,
+  placeholder,
+  required,
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  as?: "textarea";
+  placeholder?: string;
+  required?: boolean;
+}) {
   const [focused, setFocused] = useState(false);
   const [value, setValue] = useState("");
   const active = focused || value.length > 0;
@@ -1162,33 +1513,60 @@ function Footer() {
       <div className="relative mx-auto max-w-7xl">
         <div className="grid gap-12 md:grid-cols-4">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--gold)] text-[var(--ink)]"><Leaf className="h-4 w-4" /></span>
-              <span className="font-display text-2xl text-white">Marinovate<span className="text-[var(--gold)]">.</span></span>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Marinovate Farms" className="h-12 w-12 object-contain bg-white rounded-md p-1" />
+              <span className="font-display text-2xl text-white font-bold tracking-wider uppercase">
+                Marinovate Farms
+              </span>
             </div>
             <p className="mt-6 max-w-md text-sm text-white/60">
               <span className="font-script text-2xl text-[var(--gold)]">Fresh from Nature.</span>{" "}
-              Delivered across India. Premium vegetables, fruits and seafood — sourced daily, packed hygienically, shipped fast.
+              Delivered across India. Premium vegetables, fruits and seafood — sourced daily, packed
+              hygienically, shipped fast.
             </p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">Quick Links</p>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">
+              Quick Links
+            </p>
             <ul className="mt-5 space-y-2 text-sm">
-              {[["Products", "#products"], ["Story", "#story"], ["Delivery", "#delivery"], ["Bulk Orders", "#bulk"], ["Contact", "#contact"]].map(([l, h]) => (
-                <li key={h}><a href={h} className="transition hover:text-[var(--gold)]">{l}</a></li>
+              {[
+                ["Products", "#products"],
+                ["Story", "#story"],
+                ["Delivery", "#delivery"],
+                ["Bulk Orders", "#bulk"],
+                ["Contact", "#contact"],
+              ].map(([l, h]) => (
+                <li key={h}>
+                  <a href={h} className="transition hover:text-[var(--gold)]">
+                    {l}
+                  </a>
+                </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">Business Hours</p>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">
+              Business Hours
+            </p>
             <ul className="mt-5 space-y-2 text-sm text-white/70">
               <li>Mon – Sat · 10:00 AM – 6:00 PM</li>
               <li>Sun · Closed</li>
             </ul>
-            <p className="mt-6 text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">Reach us</p>
+            <p className="mt-6 text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">
+              Reach us
+            </p>
             <ul className="mt-3 space-y-1 text-sm">
-              <li><a href="tel:8019794244" className="hover:text-[var(--gold)]">+91 80197 94244</a></li>
-              <li className="break-all"><a href="mailto:marinovatefarms@gmail.com" className="hover:text-[var(--gold)]">marinovatefarms@gmail.com</a></li>
+              <li>
+                <a href="tel:8019794244" className="hover:text-[var(--gold)]">
+                  +91 80197 94244
+                </a>
+              </li>
+              <li className="break-all">
+                <a href="mailto:marinovatefarms@gmail.com" className="hover:text-[var(--gold)]">
+                  marinovatefarms@gmail.com
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -1236,29 +1614,43 @@ function CursorGlow() {
 /* Main                                                                 */
 /* ------------------------------------------------------------------ */
 export function MarinovateHome() {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const navigate = useNavigate();
+  const cartStore = useCartStore();
+  const fetchLikedItems = useLikeStore(state => state.fetchLikedItems);
+
+  useEffect(() => {
+    fetchLikedItems();
+  }, [fetchLikedItems]);
+
+  const cart = cartStore.items.map(i => ({ id: i.id, name: i.title, category: 'Vegetables' as const, price: `₹${i.price}`, image: i.imageUrl || '', quantity: i.quantity }));
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const addToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
-      }
-      return [...prev, { ...product, quantity: 1 }];
+  const addToCart = async (product: Product) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate({ to: '/login' });
+      return;
+    }
+    
+    cartStore.addItem({
+      id: product.id,
+      title: product.name,
+      price: parseFloat(product.price.replace(/[^\d.-]/g, '')),
+      quantity: 1,
+      imageUrl: product.image
     });
     setIsCartOpen(true);
   };
 
   const updateQuantity = (id: string, delta: number) => {
-    setCart((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return { ...item, quantity: Math.max(0, item.quantity + delta) };
-        }
-        return item;
-      }).filter((item) => item.quantity > 0)
-    );
+    const item = cartStore.items.find(i => i.id === id);
+    if (item) {
+      if (item.quantity + delta <= 0) {
+        cartStore.removeItem(id);
+      } else {
+        cartStore.updateQuantity(id, item.quantity + delta);
+      }
+    }
   };
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -1269,11 +1661,17 @@ export function MarinovateHome() {
       <CursorGlow />
       <FloatingLeaves />
       <Nav cartCount={cartCount} onOpenCart={() => setIsCartOpen(true)} />
-      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} updateQuantity={updateQuantity} />
+      <CartSidebar
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        updateQuantity={updateQuantity}
+      />
       <main>
         <Hero />
         <WhySection />
-        <ProductsSection addToCart={addToCart} />
+        <TrendingSection addToCart={addToCart} />
+        <ShopByCategorySection />
         <StorySection />
         <HealthSection />
         <ProcessSection />
