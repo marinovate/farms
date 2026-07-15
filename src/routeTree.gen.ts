@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CheckoutRouteImport } from './routes/checkout'
@@ -22,6 +23,11 @@ import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminCouponsRouteImport } from './routes/admin/coupons'
 import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/terms': typeof TermsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/coupons': typeof AdminCouponsRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/terms': typeof TermsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/coupons': typeof AdminCouponsRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/terms': typeof TermsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/coupons': typeof AdminCouponsRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/login'
     | '/profile'
+    | '/terms'
     | '/admin/categories'
     | '/admin/coupons'
     | '/admin/orders'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/login'
     | '/profile'
+    | '/terms'
     | '/admin/categories'
     | '/admin/coupons'
     | '/admin/orders'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/login'
     | '/profile'
+    | '/terms'
     | '/admin/categories'
     | '/admin/coupons'
     | '/admin/orders'
@@ -176,11 +188,19 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  TermsRoute: typeof TermsRoute
   CategoryCategoryNameRoute: typeof CategoryCategoryNameRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  TermsRoute: TermsRoute,
   CategoryCategoryNameRoute: CategoryCategoryNameRoute,
 }
 export const routeTree = rootRouteImport

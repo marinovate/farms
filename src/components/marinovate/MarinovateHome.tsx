@@ -36,7 +36,7 @@ import vegImg from "@/assets/vegetables.jpg";
 import fruitImg from "@/assets/fruits.jpg";
 import seaImg from "@/assets/seafood.jpg";
 import storyImg from "@/assets/story.jpg";
-import { useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate, Link, useLocation } from "@tanstack/react-router";
 import { useCartStore } from "@/store/useCartStore";
 import { supabase } from "@/lib/supabase";
 import { useLikeStore } from "@/store/useLikeStore";
@@ -1506,7 +1506,11 @@ function Field({
 /* ------------------------------------------------------------------ */
 /* Footer                                                               */
 /* ------------------------------------------------------------------ */
-function Footer() {
+export function Footer() {
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+  const prefix = isHome ? "" : "/";
+
   return (
     <footer className="relative overflow-hidden bg-[var(--forest-deep)] px-6 py-16 text-white/80 md:px-12 noise">
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-[var(--fresh)]/20 blur-[140px]" />
@@ -1531,16 +1535,23 @@ function Footer() {
             </p>
             <ul className="mt-5 space-y-2 text-sm">
               {[
-                ["Products", "#products"],
-                ["Story", "#story"],
-                ["Delivery", "#delivery"],
-                ["Bulk Orders", "#bulk"],
-                ["Contact", "#contact"],
+                ["Products", `${prefix}#products`],
+                ["Story", `${prefix}#story`],
+                ["Delivery", `${prefix}#delivery`],
+                ["Bulk Orders", `${prefix}#bulk`],
+                ["Contact", `${prefix}#contact`],
+                ["Terms & Conditions", "/terms"],
               ].map(([l, h]) => (
                 <li key={h}>
-                  <a href={h} className="transition hover:text-[var(--gold)]">
-                    {l}
-                  </a>
+                  {h.startsWith("/") ? (
+                    <Link to={h} className="transition hover:text-[var(--gold)]">
+                      {l}
+                    </Link>
+                  ) : (
+                    <a href={h} className="transition hover:text-[var(--gold)]">
+                      {l}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
