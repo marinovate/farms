@@ -1541,6 +1541,7 @@ export function Footer() {
                 ["Bulk Orders", `${prefix}#bulk`],
                 ["Contact", `${prefix}#contact`],
                 ["Terms & Conditions", "/terms"],
+                ["Privacy Policy", "/privacy"],
               ].map(([l, h]) => (
                 <li key={h}>
                   {h.startsWith("/") ? (
