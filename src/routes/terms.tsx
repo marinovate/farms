@@ -87,7 +87,7 @@ function TermsPage() {
             All products displayed on our website are subject to availability. We reserve the right to modify, discontinue, or change product specifications without prior notice. Product images are for illustration purposes only and may differ from actual products.
           </p>
           <p className="leading-relaxed">
-            Prices quoted are subject to change based on market conditions, quantity ordered, and other factors. Final pricing will be confirmed at the time of order confirmation.
+            All bulk orders on Marinovate Farms are subject to a minimum order quantity (MOQ) of 500 kg per product. Wholesale prices are quoted based on market conditions, volume ordered, and destination upon inquiry.
           </p>
         </div>
       ),

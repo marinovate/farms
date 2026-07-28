@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { ProductCard, Product, CartItem } from "@/components/marinovate/MarinovateHome";
 import { ArrowLeft, Loader2, ShoppingCart, Plus, Minus, X, ArrowUpRight, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCartStore } from "@/store/useCartStore";
+import { useCartStore, parseNumericPrice } from "@/store/useCartStore";
 
 
 export const Route = createFileRoute("/category/$categoryName")({
@@ -91,6 +91,8 @@ function CartSidebar({
   updateQuantity: (id: string, delta: number) => void;
 }) {
   const navigate = useNavigate();
+  const cartStore = useCartStore();
+  const safeTotal = typeof cartStore?.totalAmount === 'function' ? parseNumericPrice(cartStore.totalAmount()) : 0;
 
   return (
     <AnimatePresence>
@@ -128,50 +130,65 @@ function CartSidebar({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {cart.map((item) => (
-                    <div key={item.id} className="flex gap-4">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-20 w-20 rounded-xl object-cover"
-                      />
-                      <div className="flex flex-1 flex-col justify-between">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{item.name}</h4>
-                          <p className="text-sm text-gray-500">{item.price}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="text-sm font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
+                  {cart.map((item) => {
+                    const numericPrice = typeof item.price === 'number' ? item.price : (parseFloat(String(item.price).replace(/[^\d.-]/g, '')) || 0);
+                    const itemTotal = numericPrice * 500 * item.quantity;
+                    return (
+                      <div key={item.id} className="flex gap-4">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-20 w-20 rounded-xl object-cover"
+                        />
+                        <div className="flex flex-1 flex-col justify-between">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{item.name}</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">₹{numericPrice} / kg × 500 kg</p>
+                            <p className="text-sm font-bold text-gray-900 mt-0.5">
+                              ₹{itemTotal.toLocaleString('en-IN')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => updateQuantity(item.id, -1)}
+                              className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-700"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="text-sm font-medium">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.id, 1)}
+                              className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-700"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {cart.length > 0 && (
-              <div className="border-t border-gray-100 bg-gray-50 p-6">
+              <div className="border-t border-gray-100 bg-gray-50 p-6 space-y-3">
+                <div className="flex justify-between items-center text-sm font-medium text-gray-600">
+                  <span>Minimum Batch Order</span>
+                  <span className="font-bold text-[var(--forest-deep)]">500 kg / item</span>
+                </div>
+                <div className="flex justify-between items-center text-base font-bold text-gray-900 pt-1 border-t border-gray-200/60">
+                  <span>Total Amount</span>
+                  <span className="text-[var(--forest-deep)] font-display text-xl">₹{safeTotal.toLocaleString('en-IN')}</span>
+                </div>
                 <button
                   onClick={() => {
                     onClose();
                     navigate({ to: '/checkout' });
                   }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--forest-deep)] py-4 text-sm font-medium text-white transition hover:bg-[var(--forest)]"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--forest-deep)] py-4 text-sm font-medium text-white transition hover:bg-[var(--forest)] shadow-md mt-2"
                 >
-                  Proceed to Checkout <ArrowRight className="h-4 w-4" />
+                  Proceed to Checkout (₹{safeTotal.toLocaleString('en-IN')}) <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             )}
@@ -206,17 +223,19 @@ function CategoryPage() {
   }));
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const addToCart = async (product: Product) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate({ to: '/login' });
-      return;
+  const addToCart = (product: Product) => {
+    let numericPrice = 0;
+    if (typeof product.price === 'number') {
+      numericPrice = product.price;
+    } else if (typeof product.price === 'string') {
+      const match = String(product.price).match(/[\d.]+/);
+      numericPrice = match ? parseFloat(match[0]) : 0;
     }
-    
+
     cartStore.addItem({
       id: product.id,
       title: product.name,
-      price: parseFloat(product.price.replace(/[^\d.-]/g, '')),
+      price: numericPrice,
       quantity: 1,
       imageUrl: product.image
     });
@@ -273,8 +292,13 @@ function CategoryPage() {
             <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors mb-4">
               <ArrowLeft className="h-4 w-4" /> Back to Home
             </Link>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-gray-900">{categoryName}</h1>
-            <p className="mt-2 text-gray-600">Explore our premium selection of {categoryName.toLowerCase()}</p>
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+              <h1 className="font-display text-4xl md:text-5xl font-bold text-gray-900">{categoryName}</h1>
+              <span className="rounded-full bg-[var(--forest-deep)] px-3 py-1 text-xs font-bold text-white shadow-sm">
+                Bulk Supply · Min 500kg
+              </span>
+            </div>
+            <p className="text-gray-600">Explore our premium selection of {categoryName.toLowerCase()} (Minimum Order Quantity: 500 kg per item)</p>
           </div>
           <div className="mt-4 md:mt-0 text-sm font-medium text-gray-500 bg-white px-4 py-2 rounded-full border border-gray-100 shadow-sm">
             {products.length} products found

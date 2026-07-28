@@ -2,9 +2,9 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCartStore } from "@/store/useCartStore";
+import { useCartStore, parseNumericPrice } from "@/store/useCartStore";
 import { supabase } from "@/lib/supabase";
-import { MapPin, ArrowLeft, Loader2, Info, Tag, X } from "lucide-react";
+import { MapPin, ArrowLeft, Loader2, Info } from "lucide-react";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -12,7 +12,8 @@ export const Route = createFileRoute("/checkout")({
 
 function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, totalAmount, clearCart } = useCartStore();
+  const { items = [], totalAmount, clearCart } = useCartStore();
+  const [mounted, setMounted] = useState(false);
 
   const [addressDetails, setAddressDetails] = useState({
     street: "",
@@ -26,13 +27,11 @@ function CheckoutPage() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationMsg, setLocationMsg] = useState("");
 
-  const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount_amount: number} | null>(null);
-  const [couponError, setCouponError] = useState("");
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [appliedCoupon] = useState<{ code: string; discount_amount: number } | null>(null);
 
-  const discountAmount = appliedCoupon ? appliedCoupon.discount_amount : 0;
-  const finalTotal = Math.max(0, totalAmount() - discountAmount);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -40,9 +39,23 @@ function CheckoutPage() {
     script.async = true;
     document.body.appendChild(script);
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+        <div className="animate-pulse text-gray-400">Loading checkout...</div>
+      </div>
+    );
+  }
+
+  const safeTotal = typeof totalAmount === "function" ? parseNumericPrice(totalAmount()) : 0;
+  const discountAmount = appliedCoupon ? parseNumericPrice(appliedCoupon.discount_amount) : 0;
+  const finalTotal = Math.max(0, safeTotal - discountAmount);
 
   const handleReverseGeocode = async (lat: number, lng: number) => {
     try {
@@ -88,138 +101,85 @@ function CheckoutPage() {
   };
 
   const handlePayment = async () => {
-    const fullAddress = `${addressDetails.street}, ${addressDetails.cityVillage}, ${addressDetails.state}, ${addressDetails.zipCode}`;
+    if (items.length === 0) {
+      alert("Your cart is empty. Please add items before placing an order.");
+      return;
+    }
+
     if (!addressDetails.street || !addressDetails.cityVillage || !addressDetails.state || !addressDetails.zipCode) {
-      alert("Please fill out all address fields.");
+      alert("Please fill out all address fields (Street Address, Village/City, State, Zip Code).");
       return;
     }
 
     if (!location) {
-      alert("Please get your live location for precise delivery.");
+      alert("Please click the 'Get Live Location' button above to confirm your delivery location.");
       return;
     }
 
-    if (items.length === 0) {
-      alert("Cart is empty");
-      return;
-    }
+    const fullAddress = `${addressDetails.street}, ${addressDetails.cityVillage}, ${addressDetails.state}, ${addressDetails.zipCode}`;
 
     setIsProcessing(true);
 
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholder",
-      amount: finalTotal * 100,
-      currency: "INR",
-      name: "Marinovate Farms",
-      description: "Farm Fresh Order",
-      handler: async function (response: { razorpay_payment_id: string }) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          const userId = user?.id || "anonymous_user";
-
-          const { data: order, error: orderError } = await supabase
-            .from("orders")
-            .insert([{
-              user_id: userId,
-              total_amount: finalTotal,
-              payment_id: response.razorpay_payment_id,
-              address: fullAddress,
-              latitude: location.lat,
-              longitude: location.lng,
-              status: "Paid",
-            }])
-            .select()
-            .single();
-
-          if (orderError) throw orderError;
-
-          const orderItemsData = items.map((item) => ({
-            order_id: order.id,
-            product_id: item.id,
-            quantity: item.quantity,
-            price: item.price,
-          }));
-
-          const { error: itemsError } = await supabase.from("order_items").insert(orderItemsData);
-          if (itemsError) throw itemsError;
-
-          clearCart();
-          alert(`Payment Successful! Order Confirmed.`);
-          navigate({ to: "/profile" });
-        } catch (error) {
-          console.error("Error saving order details:", error);
-          alert("Payment succeeded but error saving order. Check console.");
-        }
-      },
-      prefill: {
-        name: "Customer",
-      },
-      theme: {
-        color: "#18453B", // var(--forest-deep)
-      },
-    };
-
-    // @ts-expect-error Razorpay is added dynamically via script tag
-    const rzp1 = new window.Razorpay(options);
-    rzp1.on("payment.failed", function (response: { error: { description: string } }) {
-      alert(`Payment Failed: ${response.error.description}`);
-    });
-    rzp1.open();
-    setIsProcessing(false);
-  };
-
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return;
-    setIsApplyingCoupon(true);
-    setCouponError("");
-
     try {
-      const { data, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("code", couponInput.trim().toUpperCase())
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userId = user?.id || "anonymous_user";
+
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            user_id: userId,
+            total_amount: finalTotal,
+            payment_id: `ORDER_${Date.now()}`,
+            address: fullAddress,
+            latitude: location.lat,
+            longitude: location.lng,
+            status: "Order Confirmed",
+          },
+        ])
+        .select()
         .single();
 
-      if (error || !data) {
-        setCouponError("Invalid coupon code");
-        return;
-      }
+      if (orderError) throw orderError;
 
-      if (!data.is_active) {
-        setCouponError("This coupon is no longer active");
-        return;
-      }
+      const orderItemsData = items.map((item) => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: parseNumericPrice(item.price),
+      }));
 
-      setAppliedCoupon({
-        code: data.code,
-        discount_amount: data.discount_amount
-      });
-      setCouponInput("");
-    } catch (err) {
-      console.error(err);
-      setCouponError("Failed to apply coupon");
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItemsData);
+      if (itemsError) throw itemsError;
+
+      clearCart();
+      alert(`Order Placed Successfully! Total Amount: ₹${finalTotal.toLocaleString("en-IN")}`);
+      navigate({ to: "/profile" });
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      alert("Error placing order: " + (error?.message || "Please try again."));
     } finally {
-      setIsApplyingCoupon(false);
+      setIsProcessing(false);
     }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponError("");
   };
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
       {/* Banner Header */}
       <div className="relative h-64 w-full overflow-hidden bg-[var(--forest-deep)]">
-        <img 
-          src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80" 
-          alt="Checkout banner" 
+        <img
+          src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80"
+          alt="Checkout banner"
           className="absolute inset-0 h-full w-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         <div className="absolute top-6 left-6 z-10">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white transition bg-black/20 px-4 py-2 rounded-full backdrop-blur-md">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white transition bg-black/20 px-4 py-2 rounded-full backdrop-blur-md"
+          >
             <ArrowLeft className="h-4 w-4" /> Back to Shop
           </Link>
         </div>
@@ -229,18 +189,25 @@ function CheckoutPage() {
         <h1 className="text-4xl font-display font-bold text-white drop-shadow-md mb-8">Secure Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
           <div className="lg:col-span-7 space-y-6">
             <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-display font-bold text-gray-900">Delivery Address</h2>
-                <Button 
-                  onClick={getLocation} 
+                <Button
+                  onClick={getLocation}
                   disabled={isLocating}
                   variant={location ? "outline" : "default"}
-                  className={location ? "border-[var(--forest-deep)] text-[var(--forest-deep)]" : "bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white"}
+                  className={
+                    location
+                      ? "border-[var(--forest-deep)] text-[var(--forest-deep)]"
+                      : "bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white"
+                  }
                 >
-                  {isLocating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
+                  {isLocating ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <MapPin className="h-4 w-4 mr-2" />
+                  )}
                   {location ? "Update Location" : "Get Live Location"}
                 </Button>
               </div>
@@ -254,37 +221,45 @@ function CheckoutPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">Street Address</label>
-                  <Input 
-                    value={addressDetails.street} 
-                    onChange={e => setAddressDetails({...addressDetails, street: e.target.value})}
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+                    Street Address
+                  </label>
+                  <Input
+                    value={addressDetails.street}
+                    onChange={(e) => setAddressDetails({ ...addressDetails, street: e.target.value })}
                     placeholder="House No, Building, Street Area..."
                     className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">Village / City</label>
-                    <Input 
-                      value={addressDetails.cityVillage} 
-                      onChange={e => setAddressDetails({...addressDetails, cityVillage: e.target.value})}
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+                      Village / City
+                    </label>
+                    <Input
+                      value={addressDetails.cityVillage}
+                      onChange={(e) => setAddressDetails({ ...addressDetails, cityVillage: e.target.value })}
                       className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">State</label>
-                    <Input 
-                      value={addressDetails.state} 
-                      onChange={e => setAddressDetails({...addressDetails, state: e.target.value})}
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+                      State
+                    </label>
+                    <Input
+                      value={addressDetails.state}
+                      onChange={(e) => setAddressDetails({ ...addressDetails, state: e.target.value })}
                       className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">Zip Code</label>
-                  <Input 
-                    value={addressDetails.zipCode} 
-                    onChange={e => setAddressDetails({...addressDetails, zipCode: e.target.value})}
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+                    Zip Code
+                  </label>
+                  <Input
+                    value={addressDetails.zipCode}
+                    onChange={(e) => setAddressDetails({ ...addressDetails, zipCode: e.target.value })}
                     className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                   />
                 </div>
@@ -295,102 +270,67 @@ function CheckoutPage() {
           <div className="lg:col-span-5">
             <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 sticky top-24">
               <h2 className="text-xl font-display font-bold text-gray-900 mb-6">Order Summary</h2>
-              
+
               <div className="space-y-4 mb-6">
-                {items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-4 w-4 rounded-full bg-gray-200"></div>
-                        )}
+                {items.map((item) => {
+                  const p = parseNumericPrice(item.price);
+                  const q = typeof item.quantity === "number" && item.quantity > 0 ? item.quantity : 1;
+                  const itemTotal = p * 500 * q;
+
+                  return (
+                    <div key={item.id} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full bg-gray-200"></div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{item.title}</p>
+                          <p className="text-gray-500 text-xs">
+                            ₹{p} / kg × 500 kg × {q}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{item.title}</p>
-                        <p className="text-gray-500 text-xs">Qty: {item.quantity}</p>
-                      </div>
+                      <span className="font-bold text-sm text-gray-900">₹{itemTotal.toLocaleString("en-IN")}</span>
                     </div>
-                    <span className="font-medium text-gray-900">₹{item.price * item.quantity}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              <div className="border-t border-gray-100 pt-6 mb-6">
-                
-                {/* Coupon Section */}
-                <div className="mb-6">
-                  {appliedCoupon ? (
-                    <div className="flex items-center justify-between bg-green-50 rounded-xl p-3 border border-green-100">
-                      <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-800">
-                          {appliedCoupon.code} applied (-₹{appliedCoupon.discount_amount})
-                        </span>
-                      </div>
-                      <button 
-                        onClick={handleRemoveCoupon}
-                        className="p-1 rounded-full hover:bg-green-100 text-green-700 transition"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex gap-2">
-                        <Input 
-                          placeholder="Coupon Code" 
-                          value={couponInput}
-                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          className="uppercase rounded-xl border-gray-200 focus-visible:ring-[var(--forest-deep)] h-11"
-                        />
-                        <Button 
-                          onClick={handleApplyCoupon}
-                          disabled={!couponInput.trim() || isApplyingCoupon}
-                          variant="outline"
-                          className="rounded-xl h-11 border-gray-200 text-gray-700 hover:bg-gray-50"
-                        >
-                          {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-                        </Button>
-                      </div>
-                      {couponError && (
-                        <p className="text-red-500 text-xs mt-2 ml-1">{couponError}</p>
-                      )}
-                    </div>
-                  )}
+              <div className="border-t border-gray-100 pt-6 mb-6 space-y-3">
+                <div className="flex justify-between items-center text-sm text-gray-600">
+                  <span>Batch Minimum</span>
+                  <span className="font-semibold text-gray-900">500 kg per item</span>
                 </div>
-
-                <div className="flex justify-between items-center mb-2 text-sm text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₹{totalAmount().toFixed(2)}</span>
-                </div>
-                {appliedCoupon && (
-                  <div className="flex justify-between items-center mb-2 text-sm text-green-600">
-                    <span>Discount ({appliedCoupon.code})</span>
-                    <span>-₹{appliedCoupon.discount_amount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
+                <div className="flex justify-between items-center text-sm text-gray-600">
                   <span>Delivery</span>
-                  <span className="text-green-600 font-medium">Free</span>
+                  <span className="text-green-600 font-semibold">Free Express Shipping</span>
                 </div>
                 <div className="flex justify-between items-center font-display font-bold text-lg text-gray-900 border-t border-gray-100 pt-4">
-                  <span>Total</span>
-                  <span>₹{finalTotal.toFixed(2)}</span>
+                  <span>Total Amount</span>
+                  <span className="text-[var(--forest-deep)] font-display text-2xl">
+                    ₹{finalTotal.toLocaleString("en-IN")}
+                  </span>
                 </div>
               </div>
 
               <Button
-                className="w-full h-14 text-base font-medium bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white rounded-xl shadow-lg shadow-forest-deep/20 transition-all active:scale-[0.98]"
+                type="button"
+                className="w-full min-h-[56px] py-4 px-6 text-base font-bold bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white rounded-xl shadow-lg shadow-forest-deep/20 transition-all active:scale-[0.98] cursor-pointer mt-4"
                 onClick={handlePayment}
-                disabled={isProcessing || !addressDetails.street || !addressDetails.cityVillage || !location || items.length === 0}
+                disabled={isProcessing || items.length === 0}
               >
-                {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : `Pay ₹${finalTotal.toFixed(2)}`}
+                {isProcessing ? (
+                  <Loader2 className="animate-spin h-5 w-5" />
+                ) : (
+                  `Place Order · ₹${finalTotal.toLocaleString("en-IN")}`
+                )}
               </Button>
             </div>
           </div>
-
         </div>
       </div>
     </div>

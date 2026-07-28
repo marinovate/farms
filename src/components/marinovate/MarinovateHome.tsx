@@ -37,7 +37,7 @@ import fruitImg from "@/assets/fruits.jpg";
 import seaImg from "@/assets/seafood.jpg";
 import storyImg from "@/assets/story.jpg";
 import { useNavigate, Link, useLocation } from "@tanstack/react-router";
-import { useCartStore } from "@/store/useCartStore";
+import { useCartStore, parseNumericPrice } from "@/store/useCartStore";
 import { supabase } from "@/lib/supabase";
 import { useLikeStore } from "@/store/useLikeStore";
 export type Product = {
@@ -268,9 +268,18 @@ function Hero() {
 
       <motion.div
         style={{ opacity }}
-        className="relative z-10 flex h-full items-center px-6 md:px-12"
+        className="relative z-10 flex h-full items-center px-6 md:px-12 pt-28 md:pt-36"
       >
         <div className="mx-auto max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.8 }}
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/40 bg-[var(--gold)]/10 px-4 py-1.5 backdrop-blur-md text-[var(--gold)] text-xs font-semibold uppercase tracking-wider"
+          >
+            <span>📦</span> Bulk Supply Only • Minimum Order: 500 kg
+          </motion.div>
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -460,8 +469,8 @@ function WhySection() {
     },
     {
       icon: BadgeCheck,
-      title: "Affordable Pricing",
-      body: "Direct farm & fishery sourcing lets us offer premium quality, fairly priced.",
+      title: "Bulk Wholesale Supply",
+      body: "Direct farm & fishery sourcing built for bulk orders with minimum 500kg order capacity.",
     },
     {
       icon: Sparkles,
@@ -521,6 +530,8 @@ function CartSidebar({
   updateQuantity: (id: string, delta: number) => void;
 }) {
   const navigate = useNavigate();
+  const cartStore = useCartStore();
+  const safeTotal = typeof cartStore?.totalAmount === 'function' ? parseNumericPrice(cartStore.totalAmount()) : 0;
 
   return (
     <AnimatePresence>
@@ -558,50 +569,65 @@ function CartSidebar({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {cart.map((item) => (
-                    <div key={item.id} className="flex gap-4">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-20 w-20 rounded-xl object-cover"
-                      />
-                      <div className="flex flex-1 flex-col justify-between">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{item.name}</h4>
-                          <p className="text-sm text-gray-500">{item.price}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="text-sm font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
+                  {cart.map((item) => {
+                    const numericPrice = typeof item.price === 'number' ? item.price : (parseFloat(String(item.price).replace(/[^\d.-]/g, '')) || 0);
+                    const itemTotal = numericPrice * 500 * item.quantity;
+                    return (
+                      <div key={item.id} className="flex gap-4">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-20 w-20 rounded-xl object-cover"
+                        />
+                        <div className="flex flex-1 flex-col justify-between">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{item.name}</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">₹{numericPrice} / kg × 500 kg</p>
+                            <p className="text-sm font-bold text-gray-900 mt-0.5">
+                              ₹{itemTotal.toLocaleString('en-IN')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => updateQuantity(item.id, -1)}
+                              className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-700"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="text-sm font-medium">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.id, 1)}
+                              className="grid h-7 w-7 place-items-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-700"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {cart.length > 0 && (
-              <div className="border-t border-gray-100 bg-gray-50 p-6">
+              <div className="border-t border-gray-100 bg-gray-50 p-6 space-y-3">
+                <div className="flex justify-between items-center text-sm font-medium text-gray-600">
+                  <span>Minimum Batch Order</span>
+                  <span className="font-bold text-[var(--forest-deep)]">500 kg / item</span>
+                </div>
+                <div className="flex justify-between items-center text-base font-bold text-gray-900 pt-1 border-t border-gray-200/60">
+                  <span>Total Amount</span>
+                  <span className="text-[var(--forest-deep)] font-display text-xl">₹{safeTotal.toLocaleString('en-IN')}</span>
+                </div>
                 <button
                   onClick={() => {
                     onClose();
                     navigate({ to: '/checkout' });
                   }}
-                  className="w-full rounded-xl bg-[var(--forest-deep)] py-3 text-sm font-medium text-white transition hover:bg-[var(--forest)]"
+                  className="w-full rounded-xl bg-[var(--forest-deep)] py-3.5 text-sm font-medium text-white transition hover:bg-[var(--forest)] shadow-md mt-2"
                 >
-                  Proceed to Checkout
+                  Proceed to Checkout (₹{safeTotal.toLocaleString('en-IN')})
                 </button>
               </div>
             )}
@@ -638,6 +664,9 @@ export function ProductCard({ p, addToCart }: { p: Product; addToCart: (p: Produ
           loading="lazy"
           className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
         />
+        <span className="absolute top-3 left-3 z-10 rounded-full bg-[var(--forest-deep)] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+          Min. 500 kg Order
+        </span>
         <button 
           onClick={() => toggleLike(p, navigate)}
           className="absolute top-3 right-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/80 backdrop-blur-sm text-gray-500 hover:text-red-500 transition-colors shadow-sm"
@@ -650,12 +679,17 @@ export function ProductCard({ p, addToCart }: { p: Product; addToCart: (p: Produ
           {p.category}
         </span>
         <h3 className="font-display text-lg text-gray-900">{p.name}</h3>
-        <p className="mt-1 text-sm font-medium text-gray-900 flex items-center gap-2">
-          {p.price}
-          {p.original_price && (
-            <span className="text-red-500 line-through text-xs">{p.original_price}</span>
-          )}
-        </p>
+        <div className="mt-2 flex flex-col gap-1.5">
+          <p className="text-base font-bold text-gray-900 flex items-center gap-2">
+            {p.price}
+            {p.original_price && (
+              <span className="text-red-500 line-through text-xs font-normal">{p.original_price}</span>
+            )}
+          </p>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--forest-deep)] bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100/80 w-fit">
+            <Package className="h-3.5 w-3.5 text-emerald-600" /> Minimum Order: 500 kg
+          </span>
+        </div>
 
         <div className="mt-6 mt-auto">
           <button
@@ -681,8 +715,8 @@ function TrendingSection({ addToCart }: { addToCart: (p: Product) => void }) {
           id: p.id,
           name: p.title,
           category: p.category || "Vegetables",
-          price: `₹${p.price}`,
-          original_price: p.original_price ? `₹${p.original_price}` : undefined,
+          price: `₹${p.price} / kg`,
+          original_price: p.original_price ? `₹${p.original_price} / kg` : undefined,
           image: p.image_url || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&q=80'
         } as Product)));
       }
@@ -736,6 +770,7 @@ function ShopByCategorySection() {
           eyebrow="Shop By Category"
           script="Fresh selections"
           title="Explore our premium offerings"
+          subtitle="All category products available for bulk supply (Minimum Order Quantity: 500 kg)"
         />
 
         <div className="mt-12 flex flex-wrap justify-center gap-6 md:gap-10">
@@ -743,7 +778,7 @@ function ShopByCategorySection() {
             <button
               key={cat.id}
               onClick={() => navigate({ to: '/category/$categoryName', params: { categoryName: cat.name } })}
-              className="group flex flex-col items-center gap-4 focus:outline-none"
+              className="group flex flex-col items-center gap-2 focus:outline-none"
             >
               <div className="relative h-32 w-32 md:h-40 md:w-40 overflow-hidden rounded-full border-4 border-white shadow-[var(--shadow-luxury)] transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_20px_40px_-15px_rgba(30,86,49,0.3)] bg-white">
                 {cat.image_url ? (
@@ -755,6 +790,7 @@ function ShopByCategorySection() {
                 )}
               </div>
               <h3 className="font-display text-lg font-semibold text-gray-900 group-hover:text-[var(--forest-deep)] transition-colors">{cat.name}</h3>
+              <span className="text-[11px] font-semibold text-[var(--forest-deep)] bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">Min 500 kg</span>
             </button>
           ))}
         </div>
@@ -1256,7 +1292,7 @@ function FAQ() {
     },
     {
       q: "What is the minimum order quantity?",
-      a: "MOQs depend on product and destination city. Share your requirement and we'll build a quote around your volume and cadence.",
+      a: "Our minimum order quantity is 500 kg for all bulk orders across fresh vegetables, fruits, and seafood.",
     },
   ];
   const [open, setOpen] = useState<number | null>(0);
@@ -1637,17 +1673,19 @@ export function MarinovateHome() {
   const cart = cartStore.items.map(i => ({ id: i.id, name: i.title, category: 'Vegetables' as const, price: `₹${i.price}`, image: i.imageUrl || '', quantity: i.quantity }));
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const addToCart = async (product: Product) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate({ to: '/login' });
-      return;
+  const addToCart = (product: Product) => {
+    let numericPrice = 0;
+    if (typeof product.price === 'number') {
+      numericPrice = product.price;
+    } else if (typeof product.price === 'string') {
+      const match = String(product.price).match(/[\d.]+/);
+      numericPrice = match ? parseFloat(match[0]) : 0;
     }
-    
+
     cartStore.addItem({
       id: product.id,
       title: product.name,
-      price: parseFloat(product.price.replace(/[^\d.-]/g, '')),
+      price: numericPrice,
       quantity: 1,
       imageUrl: product.image
     });

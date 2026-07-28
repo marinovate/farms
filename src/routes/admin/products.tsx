@@ -18,8 +18,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, Image as ImageIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, Pencil, Image as ImageIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/products")({
   component: AdminProducts,
@@ -38,10 +39,11 @@ type Product = {
 
 function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -57,26 +59,56 @@ function AdminProducts() {
     fetchProducts();
   }, []);
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setEditingProduct(null);
+      setFormData({
+        title: "",
+        price: "",
+        original_price: "",
+        description: "",
+        category: categories.length > 0 ? categories[0].name : "Vegetables",
+        trending: false,
+      });
+      setImageFile(null);
+    }
+  };
+
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      title: product.title || "",
+      price: product.price !== undefined && product.price !== null ? product.price.toString() : "",
+      original_price: product.original_price !== undefined && product.original_price !== null ? product.original_price.toString() : "",
+      description: product.description || "",
+      category: product.category || (categories.length > 0 ? categories[0].name : "Vegetables"),
+      trending: !!product.trending,
+    });
+    setImageFile(null);
+    setIsOpen(true);
+  };
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
         supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("categories").select("*").order("name", { ascending: true })
+        supabase.from("categories").select("*").order("name", { ascending: true }),
       ]);
-      
+
       if (productsRes.error) throw productsRes.error;
       if (productsRes.data) setProducts(productsRes.data);
-      
+
       if (categoriesRes.data) {
         setCategories(categoriesRes.data);
         if (categoriesRes.data.length > 0 && formData.category === "Vegetables") {
-           // Default to first category if 'Vegetables' is not the standard or we want dynamic default
-           setFormData(prev => ({ ...prev, category: categoriesRes.data[0].name }));
+          setFormData((prev) => ({ ...prev, category: categoriesRes.data[0].name }));
         }
       }
     } catch (error) {
       console.error("Error fetching data:", error);
+      toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -101,44 +133,73 @@ function AdminProducts() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      let imageUrl = "";
+      let imageUrl = editingProduct ? editingProduct.image_url : "";
       if (imageFile) {
         imageUrl = await handleImageUpload(imageFile);
       }
 
-      const { error } = await supabase.from("products").insert([
-        {
-          title: formData.title,
-          price: parseFloat(formData.price),
-          original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-          description: formData.description,
-          category: formData.category,
-          trending: formData.trending,
-          image_url: imageUrl,
-        },
-      ]);
+      const payload = {
+        title: formData.title,
+        price: parseFloat(formData.price) || 0,
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        description: formData.description,
+        category: formData.category,
+        trending: formData.trending,
+        image_url: imageUrl,
+      };
+
+      let error;
+      if (editingProduct) {
+        const { error: updateError } = await supabase
+          .from("products")
+          .update(payload)
+          .eq("id", editingProduct.id);
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase.from("products").insert([payload]);
+        error = insertError;
+      }
+
       if (error) throw error;
-      setIsOpen(false);
-      setImageFile(null);
-      setFormData({ title: "", price: "", original_price: "", description: "", category: categories.length > 0 ? categories[0].name : "Vegetables", trending: false });
+
+      toast.success(editingProduct ? "Product updated successfully!" : "Product created successfully!");
+      handleOpenChange(false);
       fetchProducts();
     } catch (error: any) {
       console.error("Error saving product:", error);
-      alert("Failed to save product: " + error.message);
+      toast.error("Failed to save product: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    try {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Product deleted successfully");
+      fetchProducts();
+    } catch (error: any) {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product: " + error.message);
+    }
+  };
+
   if (loading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-[var(--forest-deep)]" /></div>;
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin text-[var(--forest-deep)]" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-display font-bold text-gray-900">Products</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button className="bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white rounded-xl flex items-center gap-2">
               <Plus className="h-4 w-4" /> Add Product
@@ -146,7 +207,9 @@ function AdminProducts() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="font-display text-2xl text-[var(--forest-deep)]">New Product</DialogTitle>
+              <DialogTitle className="font-display text-2xl text-[var(--forest-deep)]">
+                {editingProduct ? "Edit Product" : "New Product"}
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div>
@@ -155,17 +218,20 @@ function AdminProducts() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Farm Fresh Tomatoes"
                   className="rounded-xl border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">Offer Price (₹)</label>
+                  <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">Price per kg (₹)</label>
                   <Input
                     required
                     type="number"
+                    step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    placeholder="40"
                     className="rounded-xl border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                   />
                 </div>
@@ -173,6 +239,7 @@ function AdminProducts() {
                   <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">Real Price (₹)</label>
                   <Input
                     type="number"
+                    step="0.01"
                     placeholder="Optional"
                     value={formData.original_price}
                     onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
@@ -195,7 +262,9 @@ function AdminProducts() {
                     </>
                   ) : (
                     categories.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
                     ))
                   )}
                 </select>
@@ -206,15 +275,18 @@ function AdminProducts() {
                   required
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Short description of produce"
                   className="rounded-xl border-gray-200 focus-visible:ring-[var(--forest-deep)]"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">Product Image</label>
+                <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">
+                  Product Image {editingProduct && "(Leave empty to keep current)"}
+                </label>
                 <div className="flex items-center gap-3">
                   <label className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900">
                     <ImageIcon className="h-4 w-4" />
-                    {imageFile ? imageFile.name : "Upload Image"}
+                    {imageFile ? imageFile.name : editingProduct ? "Change Image" : "Upload Image"}
                     <input
                       type="file"
                       accept="image/*"
@@ -229,17 +301,30 @@ function AdminProducts() {
                 </div>
               </div>
               <div className="flex items-center space-x-2 pt-2">
-                <Checkbox 
-                  id="trending" 
+                <Checkbox
+                  id="trending"
                   checked={formData.trending}
                   onCheckedChange={(c) => setFormData({ ...formData, trending: !!c })}
                 />
-                <label htmlFor="trending" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label
+                  htmlFor="trending"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
                   Mark as Trending
                 </label>
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white rounded-xl py-6 mt-4">
-                {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : "Save Product"}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white rounded-xl py-6 mt-4"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="animate-spin h-5 w-5" />
+                ) : editingProduct ? (
+                  "Update Product"
+                ) : (
+                  "Save Product"
+                )}
               </Button>
             </form>
           </DialogContent>
@@ -253,7 +338,7 @@ function AdminProducts() {
               <TableHead className="w-[80px] font-semibold text-gray-900">Image</TableHead>
               <TableHead className="font-semibold text-gray-900">Product</TableHead>
               <TableHead className="font-semibold text-gray-900">Category</TableHead>
-              <TableHead className="font-semibold text-gray-900">Price</TableHead>
+              <TableHead className="font-semibold text-gray-900">Price (₹/kg)</TableHead>
               <TableHead className="font-semibold text-gray-900">Trending</TableHead>
               <TableHead className="text-right font-semibold text-gray-900">Actions</TableHead>
             </TableRow>
@@ -277,7 +362,9 @@ function AdminProducts() {
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.title} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center text-gray-400"><ImageIcon className="h-5 w-5" /></div>
+                        <div className="h-full w-full flex items-center justify-center text-gray-400">
+                          <ImageIcon className="h-5 w-5" />
+                        </div>
                       )}
                     </div>
                   </TableCell>
@@ -287,12 +374,12 @@ function AdminProducts() {
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center rounded-full bg-[var(--fresh)]/20 px-2 py-0.5 text-xs font-medium text-[var(--forest-deep)]">
-                      {product.category || 'Uncategorized'}
+                      {product.category || "Uncategorized"}
                     </span>
                   </TableCell>
                   <TableCell>
                     <div className="font-semibold text-gray-900">
-                      ₹{product.price}
+                      ₹{product.price} / kg
                       {product.original_price && product.original_price > product.price && (
                         <span className="text-red-500 line-through text-xs ml-2">₹{product.original_price}</span>
                       )}
@@ -306,8 +393,21 @@ function AdminProducts() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" className="rounded-lg">
-                      Edit
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 mr-1"
+                      onClick={() => openEditDialog(product)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -214,7 +214,7 @@ function ProfilePage() {
                           </div>
                           <div>
                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total</p>
-                            <p className="font-medium text-gray-900">₹{order.total_amount}</p>
+                            <p className="font-bold text-gray-900">₹{order.total_amount ? order.total_amount.toLocaleString('en-IN') : (order.order_items?.reduce((sum, item) => sum + (item.price || 0) * 500 * item.quantity, 0) || 0).toLocaleString('en-IN')}</p>
                           </div>
                           <div className="hidden sm:block">
                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Order #</p>
@@ -244,7 +244,9 @@ function ProfilePage() {
                                   </div>
                                   <div className="flex-1">
                                     <h5 className="font-medium text-gray-900">{item.product?.title || "Unknown Product"}</h5>
-                                    <p className="text-sm text-gray-500">Qty: {item.quantity} × ₹{item.price}</p>
+                                    <p className="text-xs text-gray-600 font-medium">
+                                      ₹{item.price} / kg × 500 kg (Qty: {item.quantity}) = <span className="font-bold text-gray-900">₹{(item.price * 500 * item.quantity).toLocaleString('en-IN')}</span>
+                                    </p>
                                   </div>
                                 </div>
                               ))}
@@ -311,7 +313,10 @@ function ProfilePage() {
                           Saved
                         </span>
                         <h3 className="font-medium text-gray-900">{item.product_title}</h3>
-                        <p className="mt-1 text-sm font-semibold text-gray-900">₹{item.product_price}</p>
+                        {item.product_price > 0 && (
+                          <p className="mt-0.5 text-sm font-semibold text-gray-900">₹{item.product_price} / kg</p>
+                        )}
+                        <p className="mt-1 text-xs font-semibold text-[var(--forest-deep)] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 w-fit">Min Order: 500 kg</p>
                       </div>
                     </div>
                   ))}
