@@ -141,11 +141,18 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
   const [scrolled, setScrolled] = useState(false);
   const last = useRef(0);
   useEffect(() => {
+    let ticking = false;
     const onScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 40);
-      setHidden(y > last.current && y > 200);
-      last.current = y;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const y = window.scrollY;
+          setScrolled(y > 40);
+          setHidden(y > last.current && y > 200);
+          last.current = y;
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -223,16 +230,16 @@ function Nav({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => v
 /* Floating leaves                                                    */
 /* ------------------------------------------------------------------ */
 function FloatingLeaves() {
-  const leaves = Array.from({ length: 9 });
+  const leaves = Array.from({ length: 5 });
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[1] overflow-hidden">
       {leaves.map((_, i) => (
         <span
           key={i}
-          className="absolute -top-10 text-[var(--forest)]/25"
+          className="absolute -top-10 text-[var(--forest)]/15 will-change-transform"
           style={{
-            left: `${(i * 11 + 5) % 100}%`,
-            animation: `leaf-drift ${18 + (i % 5) * 4}s linear ${i * 2.3}s infinite`,
+            left: `${(i * 18 + 10) % 100}%`,
+            animation: `leaf-drift ${22 + (i % 3) * 5}s linear ${i * 3.5}s infinite`,
           }}
         >
           <Leaf className="h-5 w-5" />
@@ -1641,19 +1648,30 @@ function ProgressBar() {
 }
 
 function CursorGlow() {
-  const [pos, setPos] = useState({ x: -200, y: -200 });
+  const glowRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const onMove = (e: MouseEvent) => setPos({ x: e.clientX, y: e.clientY });
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
+    let animFrame: number;
+    const onMove = (e: MouseEvent) => {
+      cancelAnimationFrame(animFrame);
+      animFrame = requestAnimationFrame(() => {
+        if (glowRef.current) {
+          glowRef.current.style.background = `radial-gradient(280px circle at ${e.clientX}px ${e.clientY}px, oklch(0.78 0.13 85 / 0.08), transparent 60%)`;
+        }
+      });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(animFrame);
+    };
   }, []);
+
   return (
     <div
+      ref={glowRef}
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-[2] hidden md:block"
-      style={{
-        background: `radial-gradient(280px circle at ${pos.x}px ${pos.y}px, oklch(0.78 0.13 85 / 0.08), transparent 60%)`,
-      }}
+      className="pointer-events-none fixed inset-0 z-[2] hidden md:block will-change-[background]"
     />
   );
 }
