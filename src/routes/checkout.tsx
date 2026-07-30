@@ -118,49 +118,99 @@ function CheckoutPage() {
 
     const fullAddress = `${addressDetails.street}, ${addressDetails.cityVillage}, ${addressDetails.state}, ${addressDetails.zipCode}`;
 
+    // Check that Razorpay script has loaded
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Razorpay = (window as any).Razorpay;
+    if (!Razorpay) {
+      alert("Payment gateway is loading. Please wait a moment and try again.");
+      return;
+    }
+
     setIsProcessing(true);
 
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: Math.round(finalTotal * 100), // amount in paise
+      currency: "INR",
+      name: "Marinovate Farms",
+      description: `Bulk Order - ${items.length} product(s)`,
+      image: "/logo.png",
+      handler: async (response: { razorpay_payment_id: string }) => {
+        // Payment successful — now save the order to Supabase
+        try {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          const userId = user?.id || "anonymous_user";
+
+          const { data: order, error: orderError } = await supabase
+            .from("orders")
+            .insert([
+              {
+                user_id: userId,
+                total_amount: finalTotal,
+                payment_id: response.razorpay_payment_id,
+                address: fullAddress,
+                latitude: location.lat,
+                longitude: location.lng,
+                status: "Order Confirmed",
+              },
+            ])
+            .select()
+            .single();
+
+          if (orderError) throw orderError;
+
+          const orderItemsData = items.map((item) => ({
+            order_id: order.id,
+            product_id: item.id,
+            quantity: item.quantity,
+            price: parseNumericPrice(item.price),
+          }));
+
+          const { error: itemsError } = await supabase.from("order_items").insert(orderItemsData);
+          if (itemsError) throw itemsError;
+
+          clearCart();
+          alert(`Payment Successful! Order Placed.\nPayment ID: ${response.razorpay_payment_id}\nTotal: ₹${finalTotal.toLocaleString("en-IN")}`);
+          navigate({ to: "/profile" });
+        } catch (error: any) {
+          console.error("Error saving order after payment:", error);
+          alert("Payment was successful but there was an error saving your order. Please contact support with your payment ID: " + response.razorpay_payment_id);
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+      prefill: {
+        name: "",
+        email: "",
+        contact: "",
+      },
+      notes: {
+        address: fullAddress,
+        latitude: location.lat,
+        longitude: location.lng,
+      },
+      theme: {
+        color: "#1a5c38",
+      },
+      modal: {
+        ondismiss: () => {
+          setIsProcessing(false);
+        },
+      },
+    };
+
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id || "anonymous_user";
-
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert([
-          {
-            user_id: userId,
-            total_amount: finalTotal,
-            payment_id: `ORDER_${Date.now()}`,
-            address: fullAddress,
-            latitude: location.lat,
-            longitude: location.lng,
-            status: "Order Confirmed",
-          },
-        ])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItemsData = items.map((item) => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: parseNumericPrice(item.price),
-      }));
-
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItemsData);
-      if (itemsError) throw itemsError;
-
-      clearCart();
-      alert(`Order Placed Successfully! Total Amount: ₹${finalTotal.toLocaleString("en-IN")}`);
-      navigate({ to: "/profile" });
+      const rzp = new Razorpay(options);
+      rzp.on("payment.failed", (response: { error: { description: string } }) => {
+        setIsProcessing(false);
+        alert("Payment failed: " + response.error.description);
+      });
+      rzp.open();
     } catch (error: any) {
-      console.error("Error placing order:", error);
-      alert("Error placing order: " + (error?.message || "Please try again."));
-    } finally {
+      console.error("Razorpay error:", error);
+      alert("Could not open payment gateway. Please try again.");
       setIsProcessing(false);
     }
   };
