@@ -164,22 +164,29 @@ function AdminOrders() {
                     <TableHeader className="bg-gray-50/50">
                       <TableRow>
                         <TableHead>Product</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-center">Qty (Batches)</TableHead>
+                        <TableHead className="text-center">Total Kg</TableHead>
+                        <TableHead>Rate (₹/kg)</TableHead>
+                        <TableHead className="text-right">Line Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedOrder.order_items?.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.product?.title || "Unknown"}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>₹{item.price}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{item.quantity * item.price}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {selectedOrder.order_items?.map((item) => {
+                        const batches = item.quantity;
+                        const totalKg = batches * 500;
+                        const lineTotal = totalKg * item.price;
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.product?.title || "Unknown"}</TableCell>
+                            <TableCell className="text-center">{batches}</TableCell>
+                            <TableCell className="text-center font-semibold">{totalKg.toLocaleString("en-IN")} kg</TableCell>
+                            <TableCell>₹{item.price.toLocaleString("en-IN")}/kg</TableCell>
+                            <TableCell className="text-right font-medium">
+                              ₹{lineTotal.toLocaleString("en-IN")}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -238,20 +245,29 @@ function AdminOrders() {
             <thead>
               <tr className="border-b-2 border-gray-800">
                 <th className="py-3 text-sm font-bold uppercase tracking-wider">Item Description</th>
-                <th className="py-3 text-sm font-bold uppercase tracking-wider text-center">Qty</th>
-                <th className="py-3 text-sm font-bold uppercase tracking-wider text-right">Price</th>
+                <th className="py-3 text-sm font-bold uppercase tracking-wider text-center">Qty (Batches)</th>
+                <th className="py-3 text-sm font-bold uppercase tracking-wider text-center">Total Kg</th>
+                <th className="py-3 text-sm font-bold uppercase tracking-wider text-right">Rate (₹/kg)</th>
                 <th className="py-3 text-sm font-bold uppercase tracking-wider text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
-              {selectedOrder.order_items?.map((item) => (
-                <tr key={item.id} className="border-b border-gray-200">
-                  <td className="py-4 text-sm font-medium">{item.product?.title || "Unknown Product"}</td>
-                  <td className="py-4 text-sm text-center">{item.quantity}</td>
-                  <td className="py-4 text-sm text-right">₹{item.price}</td>
-                  <td className="py-4 text-sm font-bold text-right">₹{item.quantity * item.price}</td>
-                </tr>
-              ))}
+              {selectedOrder.order_items?.map((item) => {
+                const batches = item.quantity;
+                const kgPerBatch = 500;
+                const totalKg = batches * kgPerBatch;
+                const ratePerKg = item.price;
+                const lineTotal = totalKg * ratePerKg;
+                return (
+                  <tr key={item.id} className="border-b border-gray-200">
+                    <td className="py-4 text-sm font-medium">{item.product?.title || "Unknown Product"}</td>
+                    <td className="py-4 text-sm text-center">{batches}</td>
+                    <td className="py-4 text-sm text-center font-semibold">{totalKg.toLocaleString("en-IN")} kg</td>
+                    <td className="py-4 text-sm text-right">₹{ratePerKg.toLocaleString("en-IN")}/kg</td>
+                    <td className="py-4 text-sm font-bold text-right">₹{lineTotal.toLocaleString("en-IN")}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
