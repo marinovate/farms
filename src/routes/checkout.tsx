@@ -14,6 +14,7 @@ function CheckoutPage() {
   const navigate = useNavigate();
   const { items = [], totalAmount, clearCart } = useCartStore();
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const [addressDetails, setAddressDetails] = useState({
     street: "",
@@ -31,7 +32,19 @@ function CheckoutPage() {
 
   useEffect(() => {
     setMounted(true);
+    checkUser();
   }, []);
+
+  const checkUser = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      navigate({ to: "/login", search: { redirect: "/checkout" } as any });
+      return;
+    }
+    setUser(session.user);
+  };
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -139,9 +152,15 @@ function CheckoutPage() {
         // Payment successful — now save the order to Supabase
         try {
           const {
-            data: { user },
+            data: { user: currentUser },
           } = await supabase.auth.getUser();
-          const userId = user?.id || "anonymous_user";
+          const userId = currentUser?.id || user?.id;
+
+          if (!userId) {
+            alert("Your session has expired. Please log in again to complete your order.");
+            navigate({ to: "/login", search: { redirect: "/checkout" } as any });
+            return;
+          }
 
           const { data: order, error: orderError } = await supabase
             .from("orders")
