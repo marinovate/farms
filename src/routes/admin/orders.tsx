@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2 } from "lucide-react";
+import { fetchAllOrders } from "./orders.server";
 
 export const Route = createFileRoute("/admin/orders")({
   component: AdminOrders,
@@ -52,15 +52,9 @@ function AdminOrders() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("orders").select(`
-          *,
-          order_items (
-            *,
-            product:products(title)
-          )
-        `).order('created_at', { ascending: false });
-      if (error) throw error;
-      if (data) setOrders(data as Order[]);
+      // Uses a server function with the secret key — bypasses RLS to see ALL orders
+      const data = await fetchAllOrders();
+      setOrders(data as Order[]);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {

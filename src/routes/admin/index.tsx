@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Database } from "lucide-react";
+import { fetchAllOrderStats } from "./index.server";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -21,8 +22,8 @@ function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const { data, error } = await supabase.from("orders").select("total_amount, created_at");
-      if (error) throw error;
+      // Server function uses secret key — bypasses RLS to see ALL orders
+      const data = await fetchAllOrderStats();
 
       let revenue = 0;
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
