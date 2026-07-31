@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllCategories, upsertCategory, deleteCategory } from "./admin.server";
 
 export const Route = createFileRoute("/admin/categories")({
   component: AdminCategories,
@@ -64,21 +65,8 @@ function AdminCategories() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name", { ascending: true });
-        
-      if (error) {
-        // If the table doesn't exist yet, don't crash, just show empty
-        if (error.code === "42P01") {
-          toast.error("Categories table not found. Please run the SQL command.");
-        } else {
-          throw error;
-        }
-      }
-      
-      if (data) setCategories(data);
+      const data = await fetchAllCategories();
+      setCategories(data as Category[]);
     } catch (error: any) {
       console.error("Error fetching categories:", error);
     } finally {
@@ -111,30 +99,17 @@ function AdminCategories() {
         imageUrl = await handleImageUpload(imageFile);
       }
 
-      let error;
-      if (editingCategory) {
-        const { error: updateError } = await supabase.from("categories")
-          .update({ name: categoryName.trim(), image_url: imageUrl })
-          .eq("id", editingCategory.id);
-        error = updateError;
-      } else {
-        const { error: insertError } = await supabase.from("categories").insert([
-          { name: categoryName.trim(), image_url: imageUrl },
-        ]);
-        error = insertError;
-      }
-      
-      if (error) {
-        if (error.code === '23505') {
-          toast.error("Category already exists!");
-        } else {
-          throw error;
-        }
-      } else {
-        toast.success(editingCategory ? "Category updated successfully" : "Category added successfully");
-        handleOpenChange(false);
-        fetchCategories();
-      }
+      await upsertCategory({
+        data: {
+          id: editingCategory?.id,
+          name: categoryName.trim(),
+          image_url: imageUrl,
+        },
+      });
+
+      toast.success(editingCategory ? "Category updated successfully" : "Category added successfully");
+      handleOpenChange(false);
+      fetchCategories();
     } catch (error: any) {
       console.error("Error saving category:", error);
       toast.error("Failed to save category: " + error.message);
@@ -145,10 +120,8 @@ function AdminCategories() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this category? Products using this category might be affected.")) return;
-    
     try {
-      const { error } = await supabase.from("categories").delete().eq("id", id);
-      if (error) throw error;
+      await deleteCategory({ data: { id } });
       toast.success("Category deleted");
       fetchCategories();
     } catch (error: any) {

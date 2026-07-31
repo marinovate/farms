@@ -17,9 +17,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, Trash2, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllCoupons, insertCoupon, toggleCouponStatus, deleteCoupon } from "./admin.server";
 
 export const Route = createFileRoute("/admin/coupons")({
   component: AdminCoupons,
@@ -51,20 +51,8 @@ function AdminCoupons() {
   const fetchCoupons = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .order("created_at", { ascending: false });
-        
-      if (error) {
-        if (error.code === "42P01") {
-          toast.error("Coupons table not found. Please run the SQL command.");
-        } else {
-          throw error;
-        }
-      }
-      
-      if (data) setCoupons(data);
+      const data = await fetchAllCoupons();
+      setCoupons(data as Coupon[]);
     } catch (error: any) {
       console.error("Error fetching coupons:", error);
     } finally {
@@ -79,26 +67,17 @@ function AdminCoupons() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("coupons").insert([
-        { 
+      await insertCoupon({
+        data: {
           code: formData.code.trim().toUpperCase(),
           discount_amount: amount,
-          is_active: true
+          is_active: true,
         },
-      ]);
-      
-      if (error) {
-        if (error.code === '23505') {
-          toast.error("Coupon code already exists!");
-        } else {
-          throw error;
-        }
-      } else {
-        toast.success("Coupon created successfully");
-        setIsOpen(false);
-        setFormData({ code: "", discount_amount: "" });
-        fetchCoupons();
-      }
+      });
+      toast.success("Coupon created successfully");
+      setIsOpen(false);
+      setFormData({ code: "", discount_amount: "" });
+      fetchCoupons();
     } catch (error: any) {
       console.error("Error saving coupon:", error);
       toast.error("Failed to save coupon: " + error.message);
@@ -109,11 +88,7 @@ function AdminCoupons() {
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from("coupons")
-        .update({ is_active: !currentStatus })
-        .eq("id", id);
-      if (error) throw error;
+      await toggleCouponStatus({ data: { id, is_active: !currentStatus } });
       toast.success(currentStatus ? "Coupon deactivated" : "Coupon activated");
       fetchCoupons();
     } catch (error: any) {
@@ -124,10 +99,8 @@ function AdminCoupons() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this coupon?")) return;
-    
     try {
-      const { error } = await supabase.from("coupons").delete().eq("id", id);
-      if (error) throw error;
+      await deleteCoupon({ data: { id } });
       toast.success("Coupon deleted");
       fetchCoupons();
     } catch (error: any) {

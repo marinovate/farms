@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, Trash2, Pencil, Image as ImageIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { fetchAllProducts, fetchAllCategories, insertProduct, updateProduct, deleteProduct } from "./admin.server";
 
 export const Route = createFileRoute("/admin/products")({
   component: AdminProducts,
@@ -92,19 +93,14 @@ function AdminProducts() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("categories").select("*").order("name", { ascending: true }),
+      const [productsData, categoriesData] = await Promise.all([
+        fetchAllProducts(),
+        fetchAllCategories(),
       ]);
-
-      if (productsRes.error) throw productsRes.error;
-      if (productsRes.data) setProducts(productsRes.data);
-
-      if (categoriesRes.data) {
-        setCategories(categoriesRes.data);
-        if (categoriesRes.data.length > 0 && formData.category === "Vegetables") {
-          setFormData((prev) => ({ ...prev, category: categoriesRes.data[0].name }));
-        }
+      setProducts(productsData as Product[]);
+      setCategories(categoriesData as { id: string; name: string }[]);
+      if (categoriesData.length > 0 && formData.category === "Vegetables") {
+        setFormData((prev) => ({ ...prev, category: categoriesData[0].name }));
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -148,19 +144,11 @@ function AdminProducts() {
         image_url: imageUrl,
       };
 
-      let error;
       if (editingProduct) {
-        const { error: updateError } = await supabase
-          .from("products")
-          .update(payload)
-          .eq("id", editingProduct.id);
-        error = updateError;
+        await updateProduct({ data: { id: editingProduct.id, payload } });
       } else {
-        const { error: insertError } = await supabase.from("products").insert([payload]);
-        error = insertError;
+        await insertProduct({ data: payload });
       }
-
-      if (error) throw error;
 
       toast.success(editingProduct ? "Product updated successfully!" : "Product created successfully!");
       handleOpenChange(false);
@@ -175,10 +163,8 @@ function AdminProducts() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
-
     try {
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) throw error;
+      await deleteProduct({ data: { id } });
       toast.success("Product deleted successfully");
       fetchProducts();
     } catch (error: any) {

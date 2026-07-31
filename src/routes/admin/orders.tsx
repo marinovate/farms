@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2 } from "lucide-react";
-import { fetchAllOrders } from "./orders.server";
+import { fetchAllOrders } from "./admin.server";
 
 export const Route = createFileRoute("/admin/orders")({
   component: AdminOrders,
