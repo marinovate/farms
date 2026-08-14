@@ -1393,11 +1393,11 @@ function Contact() {
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-ink/50">Address</p>
                     <p className="mt-1 text-ink/80 leading-relaxed">
-                      Flat No. 201, 2nd Floor, Door No. 1-95/40,
+                      2nd Floor, Flat No. 201, Door No. 1-95/40,
                       <br />
-                      Rajiv Nagar, Venkateshwara Colony,
+                      Sai Prabha Apartment, Rajiv Nagar, L1 Technologies,
                       <br />
-                      Uppal, Hyderabad – 500039
+                      Uppal, Hyderabad – 500039, Telangana
                     </p>
                   </div>
                 </div>

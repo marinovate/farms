@@ -218,7 +218,7 @@ function AdminOrders() {
               <div>
                 <h1 className="text-4xl font-display font-bold text-gray-900 mb-1 uppercase tracking-wider">Marinovate Farms</h1>
                 <p className="text-sm text-gray-600">Premium Organic Produce</p>
-                <p className="text-sm text-gray-600">123 Farmville Road, Agri District</p>
+                <p className="text-sm text-gray-600">2nd Floor, Flat No. 201, Door No. 1-95/40, Sai Prabha Apartment, Rajiv Nagar, L1 Technologies, Uppal, Hyderabad - 500039, Telangana</p>
               </div>
             </div>
             <div className="text-right">
