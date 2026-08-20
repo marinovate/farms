@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCartStore, parseNumericPrice } from "@/store/useCartStore";
 import { supabase } from "@/lib/supabase";
-import { MapPin, ArrowLeft, Loader2, Info } from "lucide-react";
+import { MapPin, ArrowLeft, Loader2, Info, User, Phone, CheckCircle2 } from "lucide-react";
+import { formatOrderAddressPayload } from "@/lib/orderUtils";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -16,6 +17,11 @@ function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
 
+  // Customer Contact Details
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+
+  // Address Details
   const [addressDetails, setAddressDetails] = useState({
     street: "",
     cityVillage: "",
@@ -44,6 +50,20 @@ function CheckoutPage() {
       return;
     }
     setUser(session.user);
+
+    // Fetch existing profile to pre-populate name
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", session.user.id)
+        .single();
+      if (profile?.full_name) {
+        setCustomerName((prev) => prev || profile.full_name);
+      }
+    } catch (err) {
+      console.warn("Could not fetch profile info for prefill:", err);
+    }
   };
 
   useEffect(() => {
@@ -119,7 +139,18 @@ function CheckoutPage() {
       return;
     }
 
-    if (!addressDetails.street || !addressDetails.cityVillage || !addressDetails.state || !addressDetails.zipCode) {
+    if (!customerName.trim()) {
+      alert("Please enter the customer name.");
+      return;
+    }
+
+    const cleanPhone = customerPhone.replace(/\D/g, "");
+    if (!customerPhone.trim() || cleanPhone.length < 10) {
+      alert("Please enter a valid 10-digit phone / mobile number.");
+      return;
+    }
+
+    if (!addressDetails.street.trim() || !addressDetails.cityVillage.trim() || !addressDetails.state.trim() || !addressDetails.zipCode.trim()) {
       alert("Please fill out all address fields (Street Address, Village/City, State, Zip Code).");
       return;
     }
@@ -129,7 +160,16 @@ function CheckoutPage() {
       return;
     }
 
-    const fullAddress = `${addressDetails.street}, ${addressDetails.cityVillage}, ${addressDetails.state}, ${addressDetails.zipCode}`;
+    const formattedPayload = formatOrderAddressPayload({
+      name: customerName,
+      phone: customerPhone,
+      street: addressDetails.street,
+      cityVillage: addressDetails.cityVillage,
+      state: addressDetails.state,
+      zipCode: addressDetails.zipCode,
+    });
+
+    const plainAddressText = `${addressDetails.street}, ${addressDetails.cityVillage}, ${addressDetails.state}, ${addressDetails.zipCode}`;
 
     // Check that Razorpay script has loaded
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,7 +209,7 @@ function CheckoutPage() {
                 user_id: userId,
                 total_amount: finalTotal,
                 payment_id: response.razorpay_payment_id,
-                address: fullAddress,
+                address: formattedPayload,
                 latitude: location.lat,
                 longitude: location.lng,
                 status: "Order Confirmed",
@@ -190,8 +230,17 @@ function CheckoutPage() {
           const { error: itemsError } = await supabase.from("order_items").insert(orderItemsData);
           if (itemsError) throw itemsError;
 
+          // Also update user's profile full_name if available
+          if (customerName.trim()) {
+            await supabase.from("profiles").upsert({
+              id: userId,
+              full_name: customerName.trim(),
+              updated_at: new Date().toISOString(),
+            });
+          }
+
           clearCart();
-          alert(`Payment Successful! Order Placed.\nPayment ID: ${response.razorpay_payment_id}\nTotal: ₹${finalTotal.toLocaleString("en-IN")}`);
+          alert(`Payment Successful! Order Placed.\nCustomer: ${customerName}\nContact: ${customerPhone}\nPayment ID: ${response.razorpay_payment_id}\nTotal: ₹${finalTotal.toLocaleString("en-IN")}`);
           navigate({ to: "/profile" });
         } catch (error: any) {
           console.error("Error saving order after payment:", error);
@@ -201,12 +250,14 @@ function CheckoutPage() {
         }
       },
       prefill: {
-        name: "",
-        email: "",
-        contact: "",
+        name: customerName.trim(),
+        email: user?.email || "",
+        contact: customerPhone.trim(),
       },
       notes: {
-        address: fullAddress,
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        address: plainAddressText,
         latitude: location.lat,
         longitude: location.lng,
       },
@@ -259,78 +310,132 @@ function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-display font-bold text-gray-900">Delivery Address</h2>
-                <Button
-                  onClick={getLocation}
-                  disabled={isLocating}
-                  variant={location ? "outline" : "default"}
-                  className={
-                    location
-                      ? "border-[var(--forest-deep)] text-[var(--forest-deep)]"
-                      : "bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white"
-                  }
-                >
-                  {isLocating ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <MapPin className="h-4 w-4 mr-2" />
-                  )}
-                  {location ? "Update Location" : "Get Live Location"}
-                </Button>
+            {/* Customer & Delivery Form Card */}
+            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 space-y-6">
+              
+              {/* Customer Contact Section */}
+              <div>
+                <h2 className="text-xl font-display font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="h-5 w-5 text-[var(--forest-deep)]" /> Customer Contact Details
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      Customer Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="e.g. John Doe / Sourcing Head"
+                        className="rounded-xl h-11 border-gray-200 pl-3 focus-visible:ring-[var(--forest-deep)]"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <Phone className="h-3.5 w-3.5 text-gray-400" /> Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="e.g. 9876543210"
+                        className="rounded-xl h-11 border-gray-200 pl-3 focus-visible:ring-[var(--forest-deep)]"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {locationMsg && (
-                <div className="mb-6 flex items-start gap-3 bg-[var(--fresh)]/20 p-4 rounded-xl border border-[var(--fresh)]/30 text-[var(--forest-deep)] text-sm">
-                  <Info className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <p>{locationMsg}</p>
+              <div className="border-t border-gray-100 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-display font-bold text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-[var(--forest-deep)]" /> Delivery Address
+                  </h2>
+                  <Button
+                    onClick={getLocation}
+                    disabled={isLocating}
+                    variant={location ? "outline" : "default"}
+                    className={
+                      location
+                        ? "border-[var(--forest-deep)] text-[var(--forest-deep)] bg-emerald-50/50 hover:bg-emerald-50"
+                        : "bg-[var(--forest-deep)] hover:bg-[var(--forest)] text-white"
+                    }
+                  >
+                    {isLocating ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : location ? (
+                      <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />
+                    ) : (
+                      <MapPin className="h-4 w-4 mr-2" />
+                    )}
+                    {location ? "Location Captured" : "Get Live Location"}
+                  </Button>
                 </div>
-              )}
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
-                    Street Address
-                  </label>
-                  <Input
-                    value={addressDetails.street}
-                    onChange={(e) => setAddressDetails({ ...addressDetails, street: e.target.value })}
-                    placeholder="House No, Building, Street Area..."
-                    className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+                {locationMsg && (
+                  <div className="mb-6 flex items-start gap-3 bg-[var(--fresh)]/20 p-4 rounded-xl border border-[var(--fresh)]/30 text-[var(--forest-deep)] text-sm">
+                    <Info className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <p>{locationMsg}</p>
+                  </div>
+                )}
+
+                <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
-                      Village / City
+                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5 block">
+                      Street / Building / Door No. <span className="text-red-500">*</span>
                     </label>
                     <Input
-                      value={addressDetails.cityVillage}
-                      onChange={(e) => setAddressDetails({ ...addressDetails, cityVillage: e.target.value })}
+                      value={addressDetails.street}
+                      onChange={(e) => setAddressDetails({ ...addressDetails, street: e.target.value })}
+                      placeholder="House/Shop No, Building, Street Area..."
                       className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
+                      required
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5 block">
+                        Village / City <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={addressDetails.cityVillage}
+                        onChange={(e) => setAddressDetails({ ...addressDetails, cityVillage: e.target.value })}
+                        placeholder="City / Town / Village"
+                        className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5 block">
+                        State <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={addressDetails.state}
+                        onChange={(e) => setAddressDetails({ ...addressDetails, state: e.target.value })}
+                        placeholder="State"
+                        className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
-                      State
+                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5 block">
+                      Zip / PIN Code <span className="text-red-500">*</span>
                     </label>
                     <Input
-                      value={addressDetails.state}
-                      onChange={(e) => setAddressDetails({ ...addressDetails, state: e.target.value })}
+                      value={addressDetails.zipCode}
+                      onChange={(e) => setAddressDetails({ ...addressDetails, zipCode: e.target.value })}
+                      placeholder="e.g. 500039"
                       className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
+                      required
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
-                    Zip Code
-                  </label>
-                  <Input
-                    value={addressDetails.zipCode}
-                    onChange={(e) => setAddressDetails({ ...addressDetails, zipCode: e.target.value })}
-                    className="rounded-xl h-11 border-gray-200 focus-visible:ring-[var(--forest-deep)]"
-                  />
                 </div>
               </div>
             </div>

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Plus, Trash2, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
-import { fetchAllCoupons, insertCoupon, toggleCouponStatus, deleteCoupon } from "./admin.server";
+import { fetchAllCoupons, insertCoupon, toggleCouponStatus, deleteCoupon } from "./-admin.server";
 
 export const Route = createFileRoute("/admin/coupons")({
   component: AdminCoupons,

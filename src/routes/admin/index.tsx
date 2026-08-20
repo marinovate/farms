@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Database } from "lucide-react";
-import { fetchAllOrderStats } from "./admin.server";
+import { fetchAllOrderStats } from "./-admin.server";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,

@@ -1,8 +1,9 @@
 /**
- * admin.server.ts
+ * -admin.server.ts
  * All admin data operations run here — on the server — using the secret Supabase key.
  * This bypasses RLS so admins can read/write ALL data regardless of who is logged in.
  * The secret key is NEVER sent to the browser.
+ * Note: The "-" prefix tells TanStack Router to ignore this file for route generation.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
@@ -22,12 +23,23 @@ function getAdminClient() {
 // ─── ORDERS ─────────────────────────────────────────────────────────────────
 
 export const fetchAllOrders = createServerFn({ method: "GET" }).handler(async () => {
-  const { data, error } = await getAdminClient()
+  const adminClient = getAdminClient();
+  const { data: orders, error } = await adminClient
     .from("orders")
     .select("*, order_items(*, product:products(title))")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  try {
+    const { data: profiles } = await adminClient.from("profiles").select("*");
+    const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+    return (orders ?? []).map((order: any) => ({
+      ...order,
+      profile: profilesMap.get(order.user_id) || null,
+    }));
+  } catch {
+    return orders ?? [];
+  }
 });
 
 export const updateOrderStatus = createServerFn({ method: "POST" })

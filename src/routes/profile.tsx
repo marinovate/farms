@@ -5,7 +5,8 @@ import { useCartStore } from "@/store/useCartStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, Package, Heart, Settings, LogOut, ArrowLeft, Image as ImageIcon, MapPin, ReceiptText } from "lucide-react";
+import { Loader2, Package, Heart, Settings, LogOut, ArrowLeft, Image as ImageIcon, MapPin, ReceiptText, User, Phone, Printer } from "lucide-react";
+import { parseOrderCustomerAddress } from "@/lib/orderUtils";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
@@ -17,9 +18,10 @@ function ProfilePage() {
 
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [orders, setOrders] = useState<
-    { id: string; total_amount: number; status: string; created_at: string; address: string; payment_id: string; order_items?: { id: string; quantity: number; price: number; product?: { title: string, image_url: string } }[] }[]
+    { id: string; total_amount: number; status: string; created_at: string; address: string; payment_id: string; latitude?: number; longitude?: number; order_items?: { id: string; quantity: number; price: number; product?: { title: string, image_url: string } }[] }[]
   >([]);
   const [wishlist, setWishlist] = useState<{ id: string; product?: { title: string; price: number; image_url: string; category: string } }[]>([]);
+  const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<any>(null);
 
   // Profile Form State
   const [fullName, setFullName] = useState("");
@@ -119,6 +121,10 @@ function ProfilePage() {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50/50"><Loader2 className="h-8 w-8 animate-spin text-[var(--forest-deep)]" /></div>;
   }
 
+  const invoiceCustomerInfo = selectedInvoiceOrder
+    ? parseOrderCustomerAddress(selectedInvoiceOrder.address, { full_name: fullName })
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
       {/* Banner Header */}
@@ -204,69 +210,104 @@ function ProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {orders.map((order) => (
-                    <div key={order.id} className="bg-white rounded-[24px] overflow-hidden border border-gray-100 shadow-sm">
-                      <div className="bg-gray-50/80 p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex gap-8">
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Order Placed</p>
-                            <p className="font-medium text-gray-900">{new Date(order.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                  {orders.map((order) => {
+                    const customerInfo = parseOrderCustomerAddress(order.address, { full_name: fullName });
+
+                    return (
+                      <div key={order.id} className="bg-white rounded-[24px] overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="bg-gray-50/80 p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex flex-wrap gap-6 sm:gap-8 items-center">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Order Placed</p>
+                              <p className="font-medium text-gray-900 text-sm">
+                                {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Total</p>
+                              <p className="font-bold text-[var(--forest-deep)] text-sm">
+                                ₹{order.total_amount ? order.total_amount.toLocaleString('en-IN') : (order.order_items?.reduce((sum, item) => sum + (item.price || 0) * 500 * item.quantity, 0) || 0).toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                            <div className="hidden sm:block">
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Order ID</p>
+                              <p className="font-mono text-xs text-gray-700">{order.id.slice(0, 8).toUpperCase()}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total</p>
-                            <p className="font-bold text-gray-900">₹{order.total_amount ? order.total_amount.toLocaleString('en-IN') : (order.order_items?.reduce((sum, item) => sum + (item.price || 0) * 500 * item.quantity, 0) || 0).toLocaleString('en-IN')}</p>
-                          </div>
-                          <div className="hidden sm:block">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Order #</p>
-                            <p className="font-medium text-gray-900">{order.id.slice(0, 10).toUpperCase()}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center rounded-full bg-[var(--fresh)]/20 px-3 py-1 text-xs font-semibold text-[var(--forest-deep)]">
+                              {order.status}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-xl h-8 text-xs font-medium border-gray-200 hover:bg-gray-100"
+                              onClick={() => {
+                                setSelectedInvoiceOrder(order);
+                                setTimeout(() => window.print(), 150);
+                              }}
+                            >
+                              <Printer className="h-3.5 w-3.5 mr-1 text-[var(--forest-deep)]" /> Print Invoice
+                            </Button>
                           </div>
                         </div>
-                        <div>
-                          <span className="inline-flex items-center rounded-full bg-[var(--fresh)]/20 px-3 py-1 text-xs font-semibold text-[var(--forest-deep)]">
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-6">
-                        <div className="flex flex-col lg:flex-row gap-8">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-4">Items</h4>
-                            <div className="space-y-4">
-                              {order.order_items?.map((item) => (
-                                <div key={item.id} className="flex items-center gap-4">
-                                  <div className="h-16 w-16 rounded-xl bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0">
-                                    {item.product?.image_url ? (
-                                      <img src={item.product.image_url} className="h-full w-full object-cover" alt={item.product.title} />
-                                    ) : (
-                                      <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-5 w-5 text-gray-400"/></div>
-                                    )}
+                        
+                        <div className="p-6">
+                          <div className="flex flex-col lg:flex-row gap-8">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wider">Ordered Items</h4>
+                              <div className="space-y-4">
+                                {order.order_items?.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-4">
+                                    <div className="h-16 w-16 rounded-xl bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0">
+                                      {item.product?.image_url ? (
+                                        <img src={item.product.image_url} className="h-full w-full object-cover" alt={item.product.title} />
+                                      ) : (
+                                        <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-5 w-5 text-gray-400"/></div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <h5 className="font-medium text-gray-900">{item.product?.title || "Product"}</h5>
+                                      <p className="text-xs text-gray-600 font-medium mt-0.5">
+                                        ₹{item.price} / kg × 500 kg ({item.quantity} batch{item.quantity > 1 ? "es" : ""}) = <span className="font-bold text-gray-900">₹{(item.price * 500 * item.quantity).toLocaleString('en-IN')}</span>
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div className="flex-1">
-                                    <h5 className="font-medium text-gray-900">{item.product?.title || "Unknown Product"}</h5>
-                                    <p className="text-xs text-gray-600 font-medium">
-                                      ₹{item.price} / kg × 500 kg (Qty: {item.quantity}) = <span className="font-bold text-gray-900">₹{(item.price * 500 * item.quantity).toLocaleString('en-IN')}</span>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="lg:w-72 border-t lg:border-t-0 lg:border-l border-gray-100 pt-6 lg:pt-0 lg:pl-6 space-y-4">
+                              <div className="bg-gray-50/70 p-3.5 rounded-xl border border-gray-100 space-y-2">
+                                <div>
+                                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                    <User className="h-3.5 w-3.5 text-[var(--forest-deep)]" /> Customer Info
+                                  </h4>
+                                  <p className="text-sm font-semibold text-gray-900">{customerInfo.name}</p>
+                                  {customerInfo.phone && customerInfo.phone !== "Not Provided" && (
+                                    <p className="text-xs text-gray-600 font-mono mt-0.5 flex items-center gap-1">
+                                      <Phone className="h-3 w-3 text-gray-400" /> {customerInfo.phone}
                                     </p>
-                                  </div>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <div className="lg:w-64 border-t lg:border-t-0 lg:border-l border-gray-100 pt-6 lg:pt-0 lg:pl-6 space-y-4">
-                            <div>
-                              <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2"><MapPin className="h-4 w-4 text-gray-400" /> Delivery</h4>
-                              <p className="text-sm text-gray-600 leading-relaxed">{order.address}</p>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold text-gray-900 mb-1">Payment Ref</h4>
-                              <p className="text-xs text-gray-500 font-mono">{order.payment_id}</p>
+
+                                <div className="border-t border-gray-200/60 pt-2">
+                                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                    <MapPin className="h-3.5 w-3.5 text-[var(--forest-deep)]" /> Delivery Address
+                                  </h4>
+                                  <p className="text-xs text-gray-700 leading-relaxed">{customerInfo.formattedAddress}</p>
+                                </div>
+
+                                <div className="border-t border-gray-200/60 pt-2">
+                                  <p className="text-[11px] text-gray-400 font-mono">Ref: {order.payment_id}</p>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -394,6 +435,120 @@ function ProfilePage() {
         </div>
       </div>
       </div>
+
+      {/* Printable Invoice for Customer (Hidden on screen, visible on print via CSS) */}
+      {selectedInvoiceOrder && invoiceCustomerInfo && (
+        <div id="printable-invoice" className="hidden print:block p-8 bg-white text-black font-sans w-full absolute top-0 left-0">
+          {/* Header */}
+          <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-6">
+            <div className="flex items-center gap-4">
+              <img src="/logo.png" alt="Marinovate Farms Logo" className="h-20 w-20 object-contain" />
+              <div>
+                <h1 className="text-3xl font-display font-bold text-gray-900 mb-1 uppercase tracking-wider">
+                  Marinovate Farms
+                </h1>
+                <p className="text-xs text-gray-600 font-medium">Premium Agro & Fishery Bulk Produce</p>
+                <p className="text-xs text-gray-500 max-w-md mt-0.5">
+                  2nd Floor, Flat No. 201, Door No. 1-95/40, Sai Prabha Apartment, Rajiv Nagar, Uppal, Hyderabad - 500039, Telangana
+                </p>
+                <p className="text-xs text-gray-500">Email: support@marinovate.com | Web: www.marinovatefarms.com</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-widest">TAX INVOICE</h2>
+              <div className="text-xs text-gray-700 space-y-1 mt-2">
+                <p><span className="font-semibold">Invoice No:</span> INV-{selectedInvoiceOrder.id.slice(0, 8).toUpperCase()}</p>
+                <p><span className="font-semibold">Date:</span> {new Date(selectedInvoiceOrder.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                <p><span className="font-semibold">Status:</span> {selectedInvoiceOrder.status}</p>
+                <p><span className="font-semibold">Payment Ref:</span> {selectedInvoiceOrder.payment_id}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer & Billing Box */}
+          <div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-300 mb-6">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 border-b border-gray-300 pb-1">
+                Billed To & Customer Details
+              </h3>
+              <p className="text-base font-bold text-gray-900">{invoiceCustomerInfo.name}</p>
+              <p className="text-sm font-medium text-gray-700 mt-1">
+                <span className="font-semibold">Phone:</span> {invoiceCustomerInfo.phone}
+              </p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 border-b border-gray-300 pb-1">
+                Delivery Location
+              </h3>
+              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {invoiceCustomerInfo.formattedAddress}
+              </p>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <table className="w-full text-left border-collapse mb-6 border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100 border-b-2 border-gray-800 text-xs">
+                <th className="py-2.5 px-3 font-bold uppercase tracking-wider border-r border-gray-300">#</th>
+                <th className="py-2.5 px-3 font-bold uppercase tracking-wider border-r border-gray-300">Item Description</th>
+                <th className="py-2.5 px-3 font-bold uppercase tracking-wider text-center border-r border-gray-300">Qty (Batches)</th>
+                <th className="py-2.5 px-3 font-bold uppercase tracking-wider text-center border-r border-gray-300">Total Quantity</th>
+                <th className="py-2.5 px-3 font-bold uppercase tracking-wider text-right border-r border-gray-300">Rate (₹/kg)</th>
+                <th className="py-2.5 px-3 font-bold uppercase tracking-wider text-right">Amount (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedInvoiceOrder.order_items?.map((item: any, idx: number) => {
+                const batches = item.quantity;
+                const kgPerBatch = 500;
+                const totalKg = batches * kgPerBatch;
+                const ratePerKg = item.price;
+                const lineTotal = totalKg * ratePerKg;
+                return (
+                  <tr key={item.id} className="border-b border-gray-300 text-sm">
+                    <td className="py-2.5 px-3 text-gray-600 border-r border-gray-300">{idx + 1}</td>
+                    <td className="py-2.5 px-3 font-medium text-gray-900 border-r border-gray-300">
+                      {item.product?.title || "Farm Produce"}
+                    </td>
+                    <td className="py-2.5 px-3 text-center border-r border-gray-300">{batches}</td>
+                    <td className="py-2.5 px-3 text-center font-semibold border-r border-gray-300">
+                      {totalKg.toLocaleString("en-IN")} kg
+                    </td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-300">₹{ratePerKg.toLocaleString("en-IN")}</td>
+                    <td className="py-2.5 px-3 font-bold text-right">₹{lineTotal.toLocaleString("en-IN")}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {/* Summary / Total Section */}
+          <div className="flex justify-end mb-8">
+            <div className="w-1/2 border border-gray-300 rounded p-4 bg-gray-50 space-y-2">
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>Subtotal:</span>
+                <span>₹{selectedInvoiceOrder.total_amount?.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>Delivery / Logistics:</span>
+                <span className="font-semibold text-emerald-700">Free Express Shipping</span>
+              </div>
+              <div className="flex justify-between py-2 text-base font-bold border-t-2 border-gray-900 text-gray-900">
+                <span>Grand Total:</span>
+                <span>₹{selectedInvoiceOrder.total_amount?.toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Note */}
+          <div className="mt-12 text-center text-xs text-gray-500 border-t border-gray-300 pt-6 space-y-1">
+            <p className="font-semibold text-gray-800">Thank you for your bulk order with Marinovate Farms!</p>
+            <p>This is a computer-generated invoice. For order queries or support, contact support@marinovate.com or +91-9876543210.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

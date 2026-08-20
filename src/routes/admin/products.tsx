@@ -21,7 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, Trash2, Pencil, Image as ImageIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { fetchAllProducts, fetchAllCategories, insertProduct, updateProduct, deleteProduct } from "./admin.server";
+import { fetchAllProducts, fetchAllCategories, insertProduct, updateProduct, deleteProduct } from "./-admin.server";
 
 export const Route = createFileRoute("/admin/products")({
   component: AdminProducts,

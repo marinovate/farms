@@ -20,7 +20,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { fetchAllCategories, upsertCategory, deleteCategory } from "./admin.server";
+import { fetchAllCategories, upsertCategory, deleteCategory } from "./-admin.server";
 
 export const Route = createFileRoute("/admin/categories")({
   component: AdminCategories,
